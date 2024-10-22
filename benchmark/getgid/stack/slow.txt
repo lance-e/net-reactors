@@ -1,0 +1,7 @@
+goos: linux
+goarch: amd64
+pkg: net-reactors/benchmark/getgid/stack
+cpu: Intel(R) Xeon(R) Platinum 8269CY CPU @ 2.50GHz
+BenchmarkBufferWithPool-2   	    1000	      4307 ns/op	     128 B/op	       1 allocs/op
+PASS
+ok  	net-reactors/benchmark/getgid/stack	0.014s
