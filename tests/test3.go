@@ -16,12 +16,15 @@ func timeout() {
 
 func main() {
 	loop := netreactors.NewEventLoop()
-	gLoop3 = &loop
+	gLoop3 = loop
 	timerfd, err := unix.TimerfdCreate(unix.CLOCK_MONOTONIC, unix.TFD_NONBLOCK|unix.TFD_CLOEXEC)
 	if err != nil {
 		panic("create timerfd failed")
 	}
-	ch := netreactors.NewChannel(&loop, int32(timerfd))
+
+	fmt.Printf("In main: EventLoop address is %d\n", &loop)
+
+	ch := netreactors.NewChannel(loop, int32(timerfd))
 	ch.SetReadCallback(timeout)
 	ch.EnableReading()
 

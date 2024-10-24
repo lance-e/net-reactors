@@ -14,8 +14,7 @@ const (
 )
 
 type Channel struct {
-	loop_ *EventLoop
-
+	loop_    *EventLoop
 	fd_      int32
 	events_  int16
 	revents_ int16
@@ -40,6 +39,18 @@ func NewChannel(loop *EventLoop, fdArg int32) Channel {
 	}
 }
 
+func (c *Channel) SetReadCallback(cb util.EventCallback) { //fix
+	c.readCallback_ = cb
+}
+
+func (c *Channel) SetWriteCallback(cb util.EventCallback) { //fix
+	c.writeCallback_ = cb
+}
+
+func (c *Channel) SetErrorCallback(cb util.EventCallback) { //fix
+	c.errorCallback_ = cb
+}
+
 func (c *Channel) HandleEvent() {
 	//determine whether fd is valid
 	if c.revents_&unix.POLLNVAL != 0 {
@@ -60,18 +71,6 @@ func (c *Channel) HandleEvent() {
 			c.writeCallback_()
 		}
 	}
-}
-
-func (c *Channel) SetReadCallback(cb util.EventCallback) { //fix
-	c.readCallback_ = cb
-}
-
-func (c *Channel) SetWriteCallback(cb util.EventCallback) { //fix
-	c.writeCallback_ = cb
-}
-
-func (c *Channel) SetErrorCallback(cb util.EventCallback) { //fix
-	c.errorCallback_ = cb
 }
 func (c *Channel) Fd() int32 {
 	return c.fd_

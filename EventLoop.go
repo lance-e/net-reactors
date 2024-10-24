@@ -23,12 +23,17 @@ type EventLoop struct {
 // public:
 // *************************
 
-func NewEventLoop() EventLoop {
-	id := goroutine.GetGoid()
-	return EventLoop{
-		looping_:     0,
-		goroutineId_: id,
+func NewEventLoop() (el *EventLoop) {
+	//!!! bug: el is nil
+	el = &EventLoop{
+		looping_:       0,
+		quit_:          0,
+		goroutineId_:   goroutine.GetGoid(),
+		activeChannels: make([]*Channel, 0),
 	}
+	//must set the EventLoop's Poller's ownerLoop_ by transfer argument
+	el.poller_ = NewPoller(el)
+	return
 }
 
 // Loop
@@ -56,16 +61,15 @@ func (loop *EventLoop) Quit() {
 }
 
 func (loop *EventLoop) AssertInLoopGoroutine() {
-	if loop.goroutineId_ != goroutine.GetGoid() {
+	if !loop.IsInLoopGoroutine() {
 		loop.abortNotInLoopGoroutine()
 	}
-	fmt.Println("id is same")
 	return
 }
 
-/* func (loop *EventLoop) IsInLoopGoroutine() bool { */
-/* return loop.goroutineId_ == goroutine.GetGoid() */
-/* } */
+func (loop *EventLoop) IsInLoopGoroutine() bool {
+	return loop.goroutineId_ == goroutine.GetGoid()
+}
 
 func (loop *EventLoop) UpdateChannel(c *Channel) {
 	//fix: determine c.loop ?= loop

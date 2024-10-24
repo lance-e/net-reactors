@@ -21,8 +21,8 @@ type Poller struct {
 // public:
 // *************************
 
-func NewPoller(loop *EventLoop) Poller {
-	return Poller{
+func NewPoller(loop *EventLoop) *Poller {
+	return &Poller{
 		ownerLoop_: loop,
 		pollfds_:   make(pollFdList, 0),
 		channels_:  make(channelMap),
@@ -43,6 +43,7 @@ func (p *Poller) Poll(timeoutMs int, activeChannels *[]*Channel) {
 }
 
 func (p *Poller) UpdateChannel(channel *Channel) {
+	// p.ownerLoop_ == nil
 	p.AssertInLoopGoroutine()
 	log.Printf("UpdateChannel: fd=%d , events=%d\n", channel.fd_, channel.events_)
 	if channel.index_ < 0 {
