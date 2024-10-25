@@ -29,8 +29,8 @@ type Channel struct {
 //public:
 //*************************
 
-func NewChannel(loop *EventLoop, fdArg int32) Channel {
-	return Channel{
+func NewChannel(loop *EventLoop, fdArg int32) *Channel {
+	return &Channel{
 		loop_:    loop,
 		fd_:      fdArg,
 		events_:  0,

@@ -1,4 +1,4 @@
-package timer
+package netreactors
 
 import (
 	"net-reactors/base/util"
@@ -7,6 +7,8 @@ import (
 )
 
 var AtomicNumber int64 = 0
+
+//TimerId
 
 type TimerId struct {
 	Timer_    *Timer
@@ -20,6 +22,8 @@ func NewTimerId(timer *Timer, seq int64) TimerId {
 	}
 }
 
+//Timer
+
 type Timer struct {
 	callback_   util.TimerCallback
 	expiration_ time.Time
@@ -27,6 +31,10 @@ type Timer struct {
 	repeat_     bool
 	sequence_   int64
 }
+
+// *************************
+// public:
+// *************************
 
 func NewTimer(cb util.TimerCallback, when time.Time, interval float64) Timer {
 	return Timer{
@@ -37,3 +45,15 @@ func NewTimer(cb util.TimerCallback, when time.Time, interval float64) Timer {
 		sequence_:   atomic.AddInt64(&AtomicNumber, 1),
 	}
 }
+
+func (t *Timer) Run() {
+	t.callback_()
+}
+
+func (t *Timer) Expiration() time.Time {
+	return t.expiration_
+}
+
+// *************************
+// private:
+// *************************

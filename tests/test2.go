@@ -1,21 +1,21 @@
 package main
 
 import (
-	"net-reactors/net"
+	netreactors "net-reactors"
 	"sync"
 )
 
-var globalLoop *net.EventLoop
+var globalLoop2 *netreactors.EventLoop
 var wg sync.WaitGroup
 
 func goroutineFunc2() {
-	globalLoop.Loop()
+	globalLoop2.Loop()
 	wg.Done()
 }
 
 func main2() {
-	loop := net.NewEventLoop()
-	globalLoop = &loop
+	loop := netreactors.NewEventLoop()
+	globalLoop2 = loop
 
 	wg.Add(1)
 	go goroutineFunc2()

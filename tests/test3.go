@@ -14,7 +14,7 @@ func timeout() {
 	gLoop3.Quit()
 }
 
-func main() {
+func main3() {
 	loop := netreactors.NewEventLoop()
 	gLoop3 = loop
 	timerfd, err := unix.TimerfdCreate(unix.CLOCK_MONOTONIC, unix.TFD_NONBLOCK|unix.TFD_CLOEXEC)

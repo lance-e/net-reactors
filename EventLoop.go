@@ -4,7 +4,13 @@ import (
 	"fmt"
 	"log"
 	"net-reactors/base/goroutine"
+	"net-reactors/base/util"
+	"sync"
+	"time"
+
 	"sync/atomic"
+
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -12,11 +18,16 @@ const (
 )
 
 type EventLoop struct {
-	looping_       int64 //atomic
-	quit_          int64 //atomic
-	goroutineId_   int64
-	poller_        *Poller
-	activeChannels []*Channel
+	looping_                int64 //atomic
+	quit_                   int64 //atomic
+	callingPendingFunctors_ int64 //atomic
+	goroutineId_            int64
+	wakeupFd_               int
+	poller_                 *Poller
+	wakeupChannel           *Channel
+	activeChannels          []*Channel
+	mutex_                  sync.Mutex
+	pendingFunctors_        []util.Functor //GuardedBy mutex_
 }
 
 // *************************
@@ -24,15 +35,30 @@ type EventLoop struct {
 // *************************
 
 func NewEventLoop() (el *EventLoop) {
-	//!!! bug: el is nil
+
 	el = &EventLoop{
-		looping_:       0,
-		quit_:          0,
-		goroutineId_:   goroutine.GetGoid(),
-		activeChannels: make([]*Channel, 0),
+		looping_:                0,
+		quit_:                   0,
+		callingPendingFunctors_: 0,
+		goroutineId_:            goroutine.GetGoid(),
+		activeChannels:          make([]*Channel, 0),
+		mutex_:                  sync.Mutex{},
+		pendingFunctors_:        make([]util.Functor, 0),
 	}
-	//must set the EventLoop's Poller's ownerLoop_ by transfer argument
+	//eventfd more sutable for wakeupFd_
+	eventfd, err := unix.Eventfd(0, unix.EFD_NONBLOCK|unix.EFD_CLOEXEC)
+	if err != nil || eventfd < 0 {
+		log.Panicln("NewEventLoop: create Eventfd failed")
+	}
+	el.wakeupFd_ = eventfd
+
+	//must set the  ownerLoop_ by transfer argument
 	el.poller_ = NewPoller(el)
+	el.wakeupChannel = NewChannel(el, int32(eventfd))
+
+	//wakeup callback
+	el.wakeupChannel.SetReadCallback(el.HandleRead)
+	el.wakeupChannel.EnableReading()
 	return
 }
 
@@ -50,6 +76,9 @@ func (loop *EventLoop) Loop() {
 		for i := 0; i < len(loop.activeChannels); i++ {
 			loop.activeChannels[i].HandleEvent()
 		}
+
+		//the time to call DoPendingFunctors: make sure only in the event's callback that don't need to wakeup()
+		loop.DoPendingFunctors()
 	}
 
 	fmt.Println("EventLoop stop looping")
@@ -58,6 +87,9 @@ func (loop *EventLoop) Loop() {
 
 func (loop *EventLoop) Quit() {
 	atomic.StoreInt64(&loop.quit_, 1)
+	if !loop.IsInLoopGoroutine() {
+		loop.Wakeup()
+	}
 }
 
 func (loop *EventLoop) AssertInLoopGoroutine() {
@@ -77,10 +109,81 @@ func (loop *EventLoop) UpdateChannel(c *Channel) {
 	loop.poller_.UpdateChannel(c)
 }
 
+func (loop *EventLoop) RunInLoop(cb util.Functor) {
+	if loop.IsInLoopGoroutine() {
+		cb()
+	} else {
+		loop.QueueInLoop(cb)
+	}
+}
+func (loop *EventLoop) QueueInLoop(cb util.Functor) {
+	loop.mutex_.Lock()
+	loop.pendingFunctors_ = append(loop.pendingFunctors_, cb) //fix: performance
+	loop.mutex_.Unlock()
+
+	if !loop.IsInLoopGoroutine() || loop.callingPendingFunctors_ == 1 {
+		loop.Wakeup()
+	}
+}
+
+// execute callback in queue
+func (loop *EventLoop) DoPendingFunctors() {
+	functorTemp := make([]util.Functor, len(loop.pendingFunctors_))
+	atomic.StoreInt64(&loop.callingPendingFunctors_, 1)
+
+	loop.mutex_.Lock()
+	//avoid to operate the critical section directly
+	copy(functorTemp, loop.pendingFunctors_)
+	loop.pendingFunctors_ = loop.pendingFunctors_[:0]
+	loop.mutex_.Unlock()
+
+	for i := 0; i < len(functorTemp); i++ {
+		functorTemp[i]()
+	}
+
+	atomic.StoreInt64(&loop.callingPendingFunctors_, 0)
+}
+
+func (loop *EventLoop) Wakeup() {
+	var one uint64 = 1
+	n, err := unix.Write(loop.wakeupFd_, []byte{
+		byte(one), byte(one >> 8), byte(one >> 16), byte(one >> 24), byte(one >> 32), byte(one >> 40), byte(one >> 48), byte(one >> 56),
+	})
+	if n != 8 || err != nil {
+		log.Printf("Wakeup: write to wakeupFd_ failed, write %d bytes\n", n)
+	}
+}
+
+// callback run at 't'
+func (loop *EventLoop) RunAt(t time.Time, cb util.TimerCallback) {
+
+}
+
+// callback run 'delay' from now
+func (loop *EventLoop) RunAfter(nanosecond int64, cb util.TimerCallback) {
+
+}
+
+// callback run every 'interval'
+func (loop *EventLoop) RunEvery(interval float64, cb util.TimerCallback) {
+
+}
+
 // *************************
 // private:
 // *************************
 
 func (loop *EventLoop) abortNotInLoopGoroutine() {
 	log.Panicln("Abort Not In Loop Goroutine")
+}
+
+// wake up
+func (loop *EventLoop) HandleRead() {
+	var buf [8]byte
+	//will read out the number of write event from eventfd's counter   into buf
+	//such as: 5 times of write to eventfd , will read 5 ,and set the eventfd's counter to zere
+	n, err := unix.Read(loop.wakeupFd_, buf[:])
+	if err != nil || n != 8 {
+		log.Printf("loop.HandleRead: read from wakeupFd_ failed , read %d bytes\n", n)
+	}
 }
