@@ -1,26 +1,23 @@
 package netreactors
 
 import (
+	"container/heap"
 	"log"
+	"net-reactors/base/util"
+	"sort"
+	"sync/atomic"
 	"time"
-
-	"golang.org/x/sys/unix"
 )
-
-type TimeEntry struct {
-	time_  time.Time
-	timer_ *Timer
-}
 
 // fix: more high performance
 type TimerQueue struct {
 	loop_                 *EventLoop
 	timeChannel_          *Channel
 	timerfd_              int
-	timers_               map[*TimeEntry]struct{} //timer set
-	callingExpiredTimers_ int64                   //atomic
-	//activeTimer
-	//cancelingTimer
+	timers_               TimerList //timer set
+	activeTimers_         map[*Timer]struct{}
+	cancelingTimers_      map[*Timer]struct{}
+	callingExpiredTimers_ int64 //atomic
 }
 
 //*************************
@@ -28,17 +25,18 @@ type TimerQueue struct {
 //*************************
 
 func NewTimerQueue(loop *EventLoop) (tq *TimerQueue) {
-	//timerfd
-	tfd, err := unix.TimerfdCreate(unix.CLOCK_MONOTONIC, unix.TFD_NONBLOCK|unix.TFD_CLOEXEC)
-	if err != nil {
-		log.Panicf("NewTimerQueue: TimerfdCreate failed\n")
+	tfd := util.CreateTimerFd()
+	if tfd < 0 {
+		log.Printf("NewTimerQueue: create timerfd failed, timerfd < 0 \n")
 	}
 
 	tq = &TimerQueue{
 		loop_:                 loop,
 		timeChannel_:          NewChannel(loop, int32(tfd)),
 		timerfd_:              tfd,
-		timers_:               map[*TimeEntry]struct{}{},
+		timers_:               make(TimerList, 0),
+		activeTimers_:         make(map[*Timer]struct{}, 0),
+		cancelingTimers_:      make(map[*Timer]struct{}, 0),
 		callingExpiredTimers_: 0,
 	}
 
@@ -52,31 +50,136 @@ func NewTimerQueue(loop *EventLoop) (tq *TimerQueue) {
 func (tq *TimerQueue) HandleRead() {
 	tq.loop_.AssertInLoopGoroutine()
 	now := time.Now()
-
-	//read timefd
-	var buf [8]byte
-	n, err := unix.Read(tq.timerfd_, buf[:])
-	howmany := uint64(buf[0]) | uint64(buf[1])<<8 | uint64(buf[2])<<16 | uint64(buf[3])<<24 | uint64(buf[4])<<32 | uint64(buf[5])<<40 | uint64(buf[6])<<48 | uint64(buf[7])<<56
-	log.Printf("tq.HandleRead expirated %d times at now:%s\n ", howmany, now.Format("2006-01-02 15:04:05"))
-	if err != nil || n != 8 {
-		log.Printf("tq.HandleRead: read timerfd failed, read %d bytes instead of 8 bytes\n", n)
-	}
+	util.ReadTimerfd(tq.timerfd_, now)
 
 	//handle expirated timer
+	expired := tq.getExpired(now)
 
+	atomic.StoreInt64(&tq.callingExpiredTimers_, 1)
+	//callingtimers  (todo)
+	for _, entry := range expired {
+		entry.timer_.Run()
+	}
+	atomic.StoreInt64(&tq.callingExpiredTimers_, 0)
+
+	//reset expired timers
+	tq.reset(expired, now)
+}
+func (tq *TimerQueue) AddTimer(cb util.TimerCallback, when time.Time, interval float64) TimerId {
+	timer := NewTimer(cb, when, interval)
+	tq.loop_.RunInLoop(tq.bindAddTimerInLoop(timer))
+	return NewTimerId(timer, timer.sequence_)
+}
+
+func (tq *TimerQueue) Canncel(timerid TimerId) {
+	tq.loop_.RunInLoop(tq.bindCancelTimerInLoop(timerid))
 }
 
 //*************************
 //private:
 //*************************
 
-func (tq *TimerQueue) getExpired(now time.Time) {
-	//expired := make([]*TimeEntry, 0)
+// move out all expired timers from set
+func (tq *TimerQueue) getExpired(now time.Time) []TimeEntry {
+	if tq.timers_.Len() != len(tq.activeTimers_) {
+		log.Panicf("getExpired: the length of timers_ and activeTimers_ is not same\n")
+	}
+	expired := make([]TimeEntry, 0)
+	//binary search expired timer
+	idx := sort.Search(len(tq.timers_), func(i int) bool {
+		return !tq.timers_[i].when_.Before(now) //equal to now <= tq.timers_[i].when
+	})
+
+	//copy the expired timer
+	expired = append(expired, tq.timers_[:idx]...)
+	//remove the expired timer
+	tq.timers_ = tq.timers_[idx:]
+
+	//remove expired timer from activeTimers_
+	for _, entry := range expired {
+		delete(tq.activeTimers_, entry.timer_)
+	}
+	if tq.timers_.Len() != len(tq.activeTimers_) {
+		log.Panicf("getExpired: the length of timers_ and activeTimers_ is not same\n")
+	}
+	return expired
+}
+
+// bind the timer that don't need to transfer the argument
+func (tq *TimerQueue) bindAddTimerInLoop(timer *Timer) func() {
+	return func() {
+		tq.addTimerInLoop(timer)
+	}
+}
+
+// goroutine safe
+func (tq *TimerQueue) addTimerInLoop(timer *Timer) {
+	tq.loop_.AssertInLoopGoroutine()
+	earliestChaned := tq.insert(timer)
+	if earliestChaned {
+		util.ResetTimerfd(tq.timerfd_, timer.expiration_)
+	}
+}
+
+// bind the timerid
+func (tq *TimerQueue) bindCancelTimerInLoop(timerid TimerId) func() {
+	return func() {
+		tq.cancelTimerInLoop(timerid)
+	}
+}
+
+// goroutine safe
+func (tq *TimerQueue) cancelTimerInLoop(timerid TimerId) {
+	tq.loop_.AssertInLoopGoroutine()
+	if tq.timers_.Len() != len(tq.activeTimers_) {
+		log.Panicf("cancelTimerInLoop: the length of timers_ and activeTimers_ is not same\n")
+	}
+	//todo
 
 }
-func (tq *TimerQueue) reset(expired []*TimeEntry, now time.Time) {
 
+func (tq *TimerQueue) reset(expired []TimeEntry, now time.Time) {
+	var nextExpired time.Time
+	//handle expired timer:
+	//if it was repeatly and not in cancelingTimers_ that will restart
+	//otherwise it will be delete
+	for _, entry := range expired {
+		if _, ok := tq.cancelingTimers_[entry.timer_]; !ok && entry.timer_.Repeat() {
+			entry.timer_.Restart(now)
+			tq.insert(entry.timer_)
+		} else {
+			delete(tq.cancelingTimers_, entry.timer_)
+		}
+	}
+	if tq.timers_.Len() > 0 {
+		nextExpired = tq.timers_[0].timer_.expiration_
+	}
+	if !nextExpired.IsZero() {
+		util.ResetTimerfd(tq.timerfd_, nextExpired)
+	}
 }
-func (tq *TimerQueue) insert(timer *Timer) {
 
+func (tq *TimerQueue) insert(timer *Timer) bool {
+	tq.loop_.AssertInLoopGoroutine()
+	if tq.timers_.Len() != len(tq.activeTimers_) {
+		log.Panicf("insert: the length of timers_ and activeTimers_ is not same\n")
+	}
+
+	earliestChaned := false
+	when := timer.Expiration()
+	if tq.timers_.Len() == 0 || when.Before(tq.timers_[0].when_) {
+		earliestChaned = true
+	}
+	entry := TimeEntry{
+		when_:  when,
+		timer_: timer,
+	}
+	//insert
+	heap.Push(&tq.timers_, entry)
+	tq.activeTimers_[timer] = struct{}{}
+	if tq.timers_.Len() != len(tq.activeTimers_) {
+		log.Panicf("insert: the length of timers_ and activeTimers_ is not same\n")
+	}
+
+	return earliestChaned
 }

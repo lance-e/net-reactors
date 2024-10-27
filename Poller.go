@@ -32,7 +32,7 @@ func NewPoller(loop *EventLoop) *Poller {
 func (p *Poller) Poll(timeoutMs int, activeChannels *[]*Channel) {
 	n, err := unix.Poll(p.pollfds_, timeoutMs)
 	if err != nil || n < 0 {
-		log.Panicln("Poller.Poll failed")
+		log.Panicf("Poller.Poll failed ,n:%d , err:%s \n", n, err.Error())
 	}
 	if n > 0 {
 		log.Printf("%d events happended\n", n)
@@ -43,7 +43,6 @@ func (p *Poller) Poll(timeoutMs int, activeChannels *[]*Channel) {
 }
 
 func (p *Poller) UpdateChannel(channel *Channel) {
-	// p.ownerLoop_ == nil
 	p.AssertInLoopGoroutine()
 	log.Printf("UpdateChannel: fd=%d , events=%d\n", channel.fd_, channel.events_)
 	if channel.index_ < 0 {
@@ -60,6 +59,7 @@ func (p *Poller) UpdateChannel(channel *Channel) {
 		idx := len(p.pollfds_) - 1
 		channel.SetIndex(idx)
 		p.channels_[pollfd.Fd] = channel
+		log.Printf("new fd:%d add successful\n", channel.fd_)
 	} else {
 		//update existing one
 		if _, ok := p.channels_[channel.fd_]; !ok {
@@ -80,7 +80,7 @@ func (p *Poller) UpdateChannel(channel *Channel) {
 		pfd.Revents = channel.revents_
 		if channel.IsNoneEvent() {
 			//no event , ignore this pollfd
-			pfd.Fd = -1
+			pfd.Fd = -channel.Fd() - 1
 		}
 	}
 }

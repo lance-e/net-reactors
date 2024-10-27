@@ -3,40 +3,42 @@ package main
 import (
 	"fmt"
 	netreactors "net-reactors"
+	"net-reactors/base/goroutine"
 	"os"
+	"time"
 )
 
-var globalLoop4 *netreactors.EventLoop
-var g_flag = 0
+var gloop4 *netreactors.EventLoop
+var count int
 
-func run4() {
-	fmt.Printf("run4: pid:%d , flag:%d\n", os.Getpid(), g_flag)
-	globalLoop4.Quit()
-}
-func run3() {
-	fmt.Printf("run3: pid:%d , flag:%d\n", os.Getpid(), g_flag)
-	globalLoop4.RunAfter(4, run4)
-	g_flag = 3
+func printTid() {
+	fmt.Printf("pid = %d , goid = %d \n ", os.Getpid(), goroutine.GetGoid())
+	fmt.Printf("now : %s\n", time.Now().Format("2006-01-02 15:04:05"))
 }
 
-func run2() {
-	fmt.Printf("run2: pid:%d , flag:%d\n", os.Getpid(), g_flag)
-	globalLoop4.QueueInLoop(run3)
+func bindPrint(msg string) func() {
+	return func() {
+		print(msg)
+	}
 }
-func run1() {
-	g_flag = 1
-	fmt.Printf("run1: pid:%d , flag:%d\n", os.Getpid(), g_flag)
-	globalLoop4.RunInLoop(run2)
-	g_flag = 2
+func print(msg string) {
+	fmt.Printf("msg : %s , %s \n", time.Now().Format("2006-01-02 15:04:05"), msg)
+	count++
+	if count >= 20 {
+		gloop4.Quit()
+	}
 }
 
 func main() {
+	printTid()
 	loop := netreactors.NewEventLoop()
-	globalLoop4 = loop
+	gloop4 = loop
 
-	loop.RunAfter(2, run1)
+	fmt.Printf("main:\n")
+
+	loop.RunAfter(time.Second, bindPrint("once1"))
+
 	loop.Loop()
-
-	fmt.Printf("main: pid:%d , flag:%d\n", os.Getpid(), g_flag)
-
+	fmt.Printf("EventLoop stop looping\n")
+	time.Sleep(1)
 }

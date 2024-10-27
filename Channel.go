@@ -91,19 +91,22 @@ func (c *Channel) EnableReading() {
 	c.events_ |= kReadEvent
 	c.update()
 }
-
-/* func (c *Channel) EnableWriting() { */
-/* c.events_ |= kWriteEvent */
-/* c.update() */
-/* } */
-/* func (c *Channel) DisableWriting() { */
-/* c.events_ &= ^kWriteEvent */
-/* c.update() */
-/* } */
-/* func (c *Channel) DisableAll() { */
-/* c.events_ = kNoneEvent */
-/* c.update() */
-/* } */
+func (c *Channel) DisableReading() {
+	c.events_ &= ^kReadEvent
+	c.update()
+}
+func (c *Channel) EnableWriting() {
+	c.events_ |= kWriteEvent
+	c.update()
+}
+func (c *Channel) DisableWriting() {
+	c.events_ &= ^kWriteEvent
+	c.update()
+}
+func (c *Channel) DisableAll() {
+	c.events_ = kNoneEvent
+	c.update()
+}
 func (c *Channel) Index() int {
 	return c.index_
 }

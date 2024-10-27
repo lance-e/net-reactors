@@ -36,12 +36,12 @@ type Timer struct {
 // public:
 // *************************
 
-func NewTimer(cb util.TimerCallback, when time.Time, interval float64) Timer {
-	return Timer{
+func NewTimer(cb util.TimerCallback, when time.Time, interval float64) *Timer {
+	return &Timer{
 		callback_:   cb,
 		expiration_: when,
 		interval_:   interval,
-		repeat_:     false,
+		repeat_:     interval > 0.0,
 		sequence_:   atomic.AddInt64(&AtomicNumber, 1),
 	}
 }
@@ -52,6 +52,21 @@ func (t *Timer) Run() {
 
 func (t *Timer) Expiration() time.Time {
 	return t.expiration_
+}
+
+func (t *Timer) Repeat() bool {
+	return t.repeat_
+}
+func (t *Timer) Sequence() int64 {
+	return t.sequence_
+}
+
+func (t *Timer) Restart(now time.Time) {
+	if t.repeat_ {
+		t.expiration_ = now.Add(time.Duration(t.interval_))
+	} else {
+		t.expiration_ = time.Time{}
+	}
 }
 
 // *************************

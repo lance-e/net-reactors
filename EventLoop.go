@@ -24,6 +24,7 @@ type EventLoop struct {
 	goroutineId_            int64
 	wakeupFd_               int
 	poller_                 *Poller
+	timerQueue_             *TimerQueue
 	wakeupChannel           *Channel
 	activeChannels          []*Channel
 	mutex_                  sync.Mutex
@@ -46,14 +47,15 @@ func NewEventLoop() (el *EventLoop) {
 		pendingFunctors_:        make([]util.Functor, 0),
 	}
 	//eventfd more sutable for wakeupFd_
-	eventfd, err := unix.Eventfd(0, unix.EFD_NONBLOCK|unix.EFD_CLOEXEC)
-	if err != nil || eventfd < 0 {
-		log.Panicln("NewEventLoop: create Eventfd failed")
+	eventfd := util.CreateEventFd()
+	if eventfd < 0 {
+		log.Printf("NewEventLoop: create eventfd failed , eventfd < 0 \n")
 	}
 	el.wakeupFd_ = eventfd
 
 	//must set the  ownerLoop_ by transfer argument
 	el.poller_ = NewPoller(el)
+	el.timerQueue_ = NewTimerQueue(el)
 	el.wakeupChannel = NewChannel(el, int32(eventfd))
 
 	//wakeup callback
@@ -155,18 +157,18 @@ func (loop *EventLoop) Wakeup() {
 }
 
 // callback run at 't'
-func (loop *EventLoop) RunAt(t time.Time, cb util.TimerCallback) {
-
+func (loop *EventLoop) RunAt(t time.Time, cb util.TimerCallback) TimerId {
+	return loop.timerQueue_.AddTimer(cb, t, 0.0)
 }
 
 // callback run 'delay' from now
-func (loop *EventLoop) RunAfter(nanosecond int64, cb util.TimerCallback) {
-
+func (loop *EventLoop) RunAfter(duration time.Duration, cb util.TimerCallback) TimerId {
+	return loop.timerQueue_.AddTimer(cb, time.Now().Add(duration), 0.0)
 }
 
 // callback run every 'interval'
-func (loop *EventLoop) RunEvery(interval float64, cb util.TimerCallback) {
-
+func (loop *EventLoop) RunEvery(interval float64, cb util.TimerCallback) TimerId {
+	return loop.timerQueue_.AddTimer(cb, time.Now().Add(time.Duration(interval)), interval)
 }
 
 // *************************
