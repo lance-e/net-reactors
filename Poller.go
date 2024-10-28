@@ -59,7 +59,6 @@ func (p *Poller) UpdateChannel(channel *Channel) {
 		idx := len(p.pollfds_) - 1
 		channel.SetIndex(idx)
 		p.channels_[pollfd.Fd] = channel
-		log.Printf("new fd:%d add successful\n", channel.fd_)
 	} else {
 		//update existing one
 		if _, ok := p.channels_[channel.fd_]; !ok {

@@ -37,11 +37,10 @@ func ResetTimerfd(fd int, expiration time.Time) {
 	if err != nil {
 		log.Printf("ResetTimerfd :tiemrfd set failed\n")
 	}
-
 }
 
 func howMuchTimeFromNow(when time.Time) unix.Timespec {
-	microseconds := (when.UnixMicro() / int64(time.Microsecond)) - (time.Now().UnixMicro() / int64(time.Microsecond))
+	microseconds := (when.UnixNano() / int64(time.Microsecond)) - (time.Now().UnixNano() / int64(time.Microsecond))
 	if microseconds < 100 {
 		microseconds = 100
 	}

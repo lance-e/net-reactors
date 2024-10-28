@@ -36,9 +36,15 @@ func main() {
 
 	fmt.Printf("main:\n")
 
+	loop.RunAfter(time.Duration(10*(time.Second)), bindPrint("once10"))
 	loop.RunAfter(time.Second, bindPrint("once1"))
+	loop.RunAfter(time.Duration(1.5*float64(time.Second)), bindPrint("once1.5"))
+	loop.RunAfter(time.Duration(2.5*float64(time.Second)), bindPrint("once2.5"))
+	loop.RunAfter(time.Duration(3.5*float64(time.Second)), bindPrint("once3.5"))
+	loop.RunEvery(float64(2*time.Second), bindPrint("every2"))
+	loop.RunEvery(float64(3*time.Second), bindPrint("every3"))
 
 	loop.Loop()
-	fmt.Printf("EventLoop stop looping\n")
+	fmt.Printf("main EventLoop stop looping\n")
 	time.Sleep(1)
 }

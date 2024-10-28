@@ -2,6 +2,7 @@ package netreactors
 
 import (
 	"container/heap"
+	"fmt"
 	"log"
 	"net-reactors/base/util"
 	"sort"
@@ -54,9 +55,14 @@ func (tq *TimerQueue) HandleRead() {
 
 	//handle expirated timer
 	expired := tq.getExpired(now)
+	if len(expired) == 0 {
+		panic("getExpired failed, get nil expired")
+	}
 
 	atomic.StoreInt64(&tq.callingExpiredTimers_, 1)
-	//callingtimers  (todo)
+	//clear cancelingTimers_
+	tq.cancelingTimers_ = make(map[*Timer]struct{}, 0)
+
 	for _, entry := range expired {
 		entry.timer_.Run()
 	}
@@ -71,7 +77,7 @@ func (tq *TimerQueue) AddTimer(cb util.TimerCallback, when time.Time, interval f
 	return NewTimerId(timer, timer.sequence_)
 }
 
-func (tq *TimerQueue) Canncel(timerid TimerId) {
+func (tq *TimerQueue) Cancel(timerid TimerId) {
 	tq.loop_.RunInLoop(tq.bindCancelTimerInLoop(timerid))
 }
 
@@ -84,6 +90,8 @@ func (tq *TimerQueue) getExpired(now time.Time) []TimeEntry {
 	if tq.timers_.Len() != len(tq.activeTimers_) {
 		log.Panicf("getExpired: the length of timers_ and activeTimers_ is not same\n")
 	}
+	fmt.Printf("in getExpired:\n")
+	fmt.Printf("old timers length:%d\n", tq.timers_.Len())
 	expired := make([]TimeEntry, 0)
 	//binary search expired timer
 	idx := sort.Search(len(tq.timers_), func(i int) bool {
@@ -95,6 +103,8 @@ func (tq *TimerQueue) getExpired(now time.Time) []TimeEntry {
 	//remove the expired timer
 	tq.timers_ = tq.timers_[idx:]
 
+	fmt.Printf("new timers length:%d\n", tq.timers_.Len())
+	fmt.Printf("expired length:%d\n", len(expired))
 	//remove expired timer from activeTimers_
 	for _, entry := range expired {
 		delete(tq.activeTimers_, entry.timer_)
@@ -117,6 +127,7 @@ func (tq *TimerQueue) addTimerInLoop(timer *Timer) {
 	tq.loop_.AssertInLoopGoroutine()
 	earliestChaned := tq.insert(timer)
 	if earliestChaned {
+		fmt.Printf("the new first expired timer ,reset timerfd:expiration_ is %f second \n ", timer.expiration_.Sub(time.Now()).Seconds())
 		util.ResetTimerfd(tq.timerfd_, timer.expiration_)
 	}
 }
@@ -149,6 +160,7 @@ func (tq *TimerQueue) reset(expired []TimeEntry, now time.Time) {
 			tq.insert(entry.timer_)
 		} else {
 			delete(tq.cancelingTimers_, entry.timer_)
+			entry.timer_ = nil
 		}
 	}
 	if tq.timers_.Len() > 0 {
@@ -165,10 +177,10 @@ func (tq *TimerQueue) insert(timer *Timer) bool {
 		log.Panicf("insert: the length of timers_ and activeTimers_ is not same\n")
 	}
 
-	earliestChaned := false
+	earliestChanged := false
 	when := timer.Expiration()
 	if tq.timers_.Len() == 0 || when.Before(tq.timers_[0].when_) {
-		earliestChaned = true
+		earliestChanged = true
 	}
 	entry := TimeEntry{
 		when_:  when,
@@ -181,5 +193,5 @@ func (tq *TimerQueue) insert(timer *Timer) bool {
 		log.Panicf("insert: the length of timers_ and activeTimers_ is not same\n")
 	}
 
-	return earliestChaned
+	return earliestChanged
 }
