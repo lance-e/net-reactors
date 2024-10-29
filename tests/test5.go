@@ -4,6 +4,7 @@ import (
 	"fmt"
 	netreactors "net-reactors"
 	"os"
+	"time"
 )
 
 var globalLoop5 *netreactors.EventLoop
@@ -15,7 +16,7 @@ func run4() {
 }
 func run3() {
 	fmt.Printf("run3: pid:%d , flag:%d\n", os.Getpid(), g_flag)
-	globalLoop5.RunAfter(4, run4)
+	globalLoop5.RunAfter(3*time.Second, run4)
 	g_flag = 3
 }
 
@@ -30,7 +31,7 @@ func run1() {
 	g_flag = 2
 }
 
-func main5() {
+func main() {
 	loop := netreactors.NewEventLoop()
 	globalLoop5 = loop
 

@@ -2,7 +2,6 @@ package netreactors
 
 import (
 	"container/heap"
-	"fmt"
 	"log"
 	"net-reactors/base/util"
 	"sort"
@@ -90,8 +89,6 @@ func (tq *TimerQueue) getExpired(now time.Time) []TimeEntry {
 	if tq.timers_.Len() != len(tq.activeTimers_) {
 		log.Panicf("getExpired: the length of timers_ and activeTimers_ is not same\n")
 	}
-	fmt.Printf("in getExpired:\n")
-	fmt.Printf("old timers length:%d\n", tq.timers_.Len())
 	expired := make([]TimeEntry, 0)
 	//binary search expired timer
 	idx := sort.Search(len(tq.timers_), func(i int) bool {
@@ -103,8 +100,6 @@ func (tq *TimerQueue) getExpired(now time.Time) []TimeEntry {
 	//remove the expired timer
 	tq.timers_ = tq.timers_[idx:]
 
-	fmt.Printf("new timers length:%d\n", tq.timers_.Len())
-	fmt.Printf("expired length:%d\n", len(expired))
 	//remove expired timer from activeTimers_
 	for _, entry := range expired {
 		delete(tq.activeTimers_, entry.timer_)
@@ -127,7 +122,6 @@ func (tq *TimerQueue) addTimerInLoop(timer *Timer) {
 	tq.loop_.AssertInLoopGoroutine()
 	earliestChaned := tq.insert(timer)
 	if earliestChaned {
-		fmt.Printf("the new first expired timer ,reset timerfd:expiration_ is %f second \n ", timer.expiration_.Sub(time.Now()).Seconds())
 		util.ResetTimerfd(tq.timerfd_, timer.expiration_)
 	}
 }

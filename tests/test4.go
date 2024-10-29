@@ -29,7 +29,7 @@ func print(msg string) {
 	}
 }
 
-func main() {
+func main4() {
 	printTid()
 	loop := netreactors.NewEventLoop()
 	gloop4 = loop
