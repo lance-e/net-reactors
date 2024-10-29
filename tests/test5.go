@@ -31,7 +31,7 @@ func run1() {
 	g_flag = 2
 }
 
-func main() {
+func main5() {
 	loop := netreactors.NewEventLoop()
 	globalLoop5 = loop
 
