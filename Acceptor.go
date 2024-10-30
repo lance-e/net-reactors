@@ -8,8 +8,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type NewConnectionCallback func(int, *netip.AddrPort)
-
 type Acceptor struct {
 	loop_                  *EventLoop
 	socketfd_              int

@@ -28,7 +28,7 @@ type EventLoop struct {
 	wakeupChannel           *Channel
 	activeChannels          []*Channel
 	mutex_                  sync.Mutex
-	pendingFunctors_        []util.Functor //GuardedBy mutex_
+	pendingFunctors_        []Functor //GuardedBy mutex_
 }
 
 // *************************
@@ -44,7 +44,7 @@ func NewEventLoop() (el *EventLoop) {
 		goroutineId_:            goroutine.GetGoid(),
 		activeChannels:          make([]*Channel, 0),
 		mutex_:                  sync.Mutex{},
-		pendingFunctors_:        make([]util.Functor, 0),
+		pendingFunctors_:        make([]Functor, 0),
 	}
 	//eventfd more sutable for wakeupFd_
 	eventfd := util.CreateEventFd()
@@ -111,14 +111,14 @@ func (loop *EventLoop) UpdateChannel(c *Channel) {
 	loop.poller_.UpdateChannel(c)
 }
 
-func (loop *EventLoop) RunInLoop(cb util.Functor) {
+func (loop *EventLoop) RunInLoop(cb Functor) {
 	if loop.IsInLoopGoroutine() {
 		cb()
 	} else {
 		loop.QueueInLoop(cb)
 	}
 }
-func (loop *EventLoop) QueueInLoop(cb util.Functor) {
+func (loop *EventLoop) QueueInLoop(cb Functor) {
 	loop.mutex_.Lock()
 	loop.pendingFunctors_ = append(loop.pendingFunctors_, cb) //fix: performance
 	loop.mutex_.Unlock()
@@ -130,7 +130,7 @@ func (loop *EventLoop) QueueInLoop(cb util.Functor) {
 
 // execute callback in queue
 func (loop *EventLoop) DoPendingFunctors() {
-	functorTemp := make([]util.Functor, len(loop.pendingFunctors_))
+	functorTemp := make([]Functor, len(loop.pendingFunctors_))
 	atomic.StoreInt64(&loop.callingPendingFunctors_, 1)
 
 	loop.mutex_.Lock()
@@ -157,17 +157,17 @@ func (loop *EventLoop) Wakeup() {
 }
 
 // callback run at 't'
-func (loop *EventLoop) RunAt(t time.Time, cb util.TimerCallback) TimerId {
+func (loop *EventLoop) RunAt(t time.Time, cb TimerCallback) TimerId {
 	return loop.timerQueue_.AddTimer(cb, t, 0.0)
 }
 
 // callback run 'delay' from now
-func (loop *EventLoop) RunAfter(duration time.Duration, cb util.TimerCallback) TimerId {
+func (loop *EventLoop) RunAfter(duration time.Duration, cb TimerCallback) TimerId {
 	return loop.timerQueue_.AddTimer(cb, time.Now().Add(duration), 0.0)
 }
 
 // callback run every 'interval'
-func (loop *EventLoop) RunEvery(interval float64, cb util.TimerCallback) TimerId {
+func (loop *EventLoop) RunEvery(interval float64, cb TimerCallback) TimerId {
 	return loop.timerQueue_.AddTimer(cb, time.Now().Add(time.Duration(interval)), interval)
 }
 

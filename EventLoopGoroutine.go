@@ -4,8 +4,6 @@ import (
 	"sync"
 )
 
-type GoroutineCallback func(*EventLoop)
-
 type EventLoopGoroutine struct {
 	loop_     *EventLoop
 	mutex_    *sync.Mutex

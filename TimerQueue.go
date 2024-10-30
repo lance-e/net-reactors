@@ -70,7 +70,7 @@ func (tq *TimerQueue) HandleRead() {
 	//reset expired timers
 	tq.reset(expired, now)
 }
-func (tq *TimerQueue) AddTimer(cb util.TimerCallback, when time.Time, interval float64) TimerId {
+func (tq *TimerQueue) AddTimer(cb TimerCallback, when time.Time, interval float64) TimerId {
 	timer := NewTimer(cb, when, interval)
 	tq.loop_.RunInLoop(tq.bindAddTimerInLoop(timer))
 	return NewTimerId(timer, timer.sequence_)

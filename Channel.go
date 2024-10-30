@@ -2,7 +2,6 @@ package netreactors
 
 import (
 	"fmt"
-	"net-reactors/base/util"
 
 	"golang.org/x/sys/unix"
 )
@@ -20,9 +19,9 @@ type Channel struct {
 	revents_ int16
 	index_   int
 
-	readCallback_  util.EventCallback
-	writeCallback_ util.EventCallback
-	errorCallback_ util.EventCallback
+	readCallback_  EventCallback
+	writeCallback_ EventCallback
+	errorCallback_ EventCallback
 }
 
 //*************************
@@ -39,15 +38,15 @@ func NewChannel(loop *EventLoop, fdArg int32) *Channel {
 	}
 }
 
-func (c *Channel) SetReadCallback(cb util.EventCallback) { //fix
+func (c *Channel) SetReadCallback(cb EventCallback) { //fix
 	c.readCallback_ = cb
 }
 
-func (c *Channel) SetWriteCallback(cb util.EventCallback) { //fix
+func (c *Channel) SetWriteCallback(cb EventCallback) { //fix
 	c.writeCallback_ = cb
 }
 
-func (c *Channel) SetErrorCallback(cb util.EventCallback) { //fix
+func (c *Channel) SetErrorCallback(cb EventCallback) { //fix
 	c.errorCallback_ = cb
 }
 
