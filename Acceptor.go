@@ -1,11 +1,14 @@
 package netreactors
 
 import (
+	"log"
 	"net-reactors/base/socket"
 	"net/netip"
+
+	"golang.org/x/sys/unix"
 )
 
-type NewConnectionCallback func(int, *InetAddress)
+type NewConnectionCallback func(int, *netip.AddrPort)
 
 type Acceptor struct {
 	loop_                  *EventLoop
@@ -19,7 +22,7 @@ type Acceptor struct {
 // public:
 // *************************
 
-func (a *Acceptor) NewAcceptor(loop *EventLoop, listenAddr *netip.AddrPort, reusePort bool) (ac Acceptor) {
+func NewAcceptor(loop *EventLoop, listenAddr *netip.AddrPort, reusePort bool) (ac *Acceptor) {
 	//set socketfd
 	fd := socket.CreateNonBlockOrDie()
 	socket.SetReuseAddr(fd, true)
@@ -27,7 +30,7 @@ func (a *Acceptor) NewAcceptor(loop *EventLoop, listenAddr *netip.AddrPort, reus
 	socket.BindOrDie(fd, listenAddr)
 
 	//acceptor object
-	ac = Acceptor{
+	ac = &Acceptor{
 		loop_:                  loop,
 		socketfd_:              fd,
 		acceptChannel_:         NewChannel(loop, int32(fd)),
@@ -36,8 +39,7 @@ func (a *Acceptor) NewAcceptor(loop *EventLoop, listenAddr *netip.AddrPort, reus
 	}
 
 	//set channel
-	ac.acceptChannel_.SetReadCallback(a.handleRead)
-
+	ac.acceptChannel_.SetReadCallback(ac.handleRead)
 	return
 }
 
@@ -61,5 +63,17 @@ func (a *Acceptor) Listening() bool {
 // *************************
 
 func (a *Acceptor) handleRead() {
-
+	a.loop_.AssertInLoopGoroutine()
+	connfd, addr := socket.Accept4(a.socketfd_)
+	if connfd >= 0 {
+		if a.newConnectionCallback_ != nil {
+			a.newConnectionCallback_(connfd, addr)
+		} else {
+			unix.Close(connfd)
+		}
+	} else {
+		log.Printf("Acceptor:handleRead accept new connection happened error\n")
+		//todo handle the special error
+		//if fd all use , here can do a special handle
+	}
 }

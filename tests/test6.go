@@ -12,7 +12,7 @@ func GoroutineFunc() {
 	fmt.Printf("Func: pid:%d , goid:%d\n", os.Getpid(), goroutine.GetGoid())
 }
 
-func main() {
+func main6() {
 	fmt.Printf("main: pid:%d , goid:%d\n", os.Getpid(), goroutine.GetGoid())
 
 	eg := netreactors.NewEventLoopGoroutine(nil)

@@ -3,6 +3,7 @@ package socket
 import (
 	"log"
 	"net/netip"
+	"syscall"
 
 	"golang.org/x/sys/unix"
 )
@@ -31,15 +32,52 @@ func ListenOrDie(fd int) {
 	}
 }
 
-func Accept(fd int, client netip.AddrPort) {
+func Accept4(fd int) (int, *netip.AddrPort) {
 	nfd, sa, err := unix.Accept4(fd, unix.SOCK_NONBLOCK|unix.SOCK_CLOEXEC)
-	if err != nil {
-		log.Printf("Accept:accept new connetction failed,error:%s\n", err.Error())
+	if nfd < 0 && err != nil {
+		switch err.(syscall.Errno) {
+		case syscall.EAGAIN:
+		case syscall.ECONNABORTED:
+		case syscall.EINTR:
+		case syscall.EPROTO:
+		case syscall.EPERM:
+		case syscall.EMFILE:
+			//the above are expected error
+			break
+		case syscall.EBADF:
+		case syscall.EFAULT:
+		case syscall.EINVAL:
+		case syscall.ENFILE:
+		case syscall.ENOBUFS:
+		case syscall.ENOMEM:
+		case syscall.ENOTSOCK:
+		case syscall.EOPNOTSUPP:
+			log.Fatalf("Accept4: unexpected error of accept ,error:%s\n", err.Error())
+			break
+		default:
+
+		}
 	}
-	if nfd < 0 {
-		//todo handle every case
+	client := netip.AddrPort{}
+	switch addr := sa.(type) {
+	case *unix.SockaddrInet4:
+		ip, ok := netip.AddrFromSlice(addr.Addr[:])
+		if !ok {
+			log.Printf("Accept4: parse ip address failed\n")
+			break
+		}
+		client = netip.AddrPortFrom(ip, uint16(addr.Port))
+	case *unix.SockaddrInet6:
+		log.Printf("Accept4:unsupport ipv6\n")
+		break
+	case *unix.SockaddrUnix:
+		log.Printf("Accept4:unsupport unix family\n")
+		break
+	default:
+		log.Printf("Accept4: unknown socket address type\n")
 	}
-	return netip.AddrPort{}
+
+	return nfd, &client
 }
 
 func SetReuseAddr(fd int, isReuse bool) {
