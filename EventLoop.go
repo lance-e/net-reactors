@@ -106,11 +106,24 @@ func (loop *EventLoop) IsInLoopGoroutine() bool {
 }
 
 func (loop *EventLoop) UpdateChannel(c *Channel) {
-	//fix: determine c.loop ?= loop
+	if loop != c.loop_ {
+		log.Panicf("loop.UpdateChannel: the chnnel's owner loop is this loop\n")
+	}
 	loop.AssertInLoopGoroutine()
 	loop.poller_.UpdateChannel(c)
 }
 
+func (loop *EventLoop) RemoveChannel(c *Channel) {
+	if loop != c.loop_ {
+		log.Panicf("loop.RemoveChannel: the chnnel's owner loop is this loop\n")
+	}
+	loop.AssertInLoopGoroutine()
+	//todo add eventHandling
+
+	loop.poller_.RemoveChannel(c)
+}
+
+// make sure run in loop
 func (loop *EventLoop) RunInLoop(cb Functor) {
 	if loop.IsInLoopGoroutine() {
 		cb()
@@ -118,6 +131,8 @@ func (loop *EventLoop) RunInLoop(cb Functor) {
 		loop.QueueInLoop(cb)
 	}
 }
+
+// functor queue
 func (loop *EventLoop) QueueInLoop(cb Functor) {
 	loop.mutex_.Lock()
 	loop.pendingFunctors_ = append(loop.pendingFunctors_, cb) //fix: performance

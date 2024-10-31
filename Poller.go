@@ -72,7 +72,7 @@ func (p *Poller) UpdateChannel(channel *Channel) {
 			log.Panicln("Poller.UpdateChannel: the index of channel is invalid")
 		}
 		pfd := &p.pollfds_[idx]
-		if pfd.Fd != channel.fd_ && pfd.Fd != -1 {
+		if pfd.Fd != channel.Fd() && pfd.Fd != -channel.Fd()-1 {
 			log.Panicln("Panicln.UpdateChannel: the fd is invalid")
 		}
 		pfd.Events = channel.events_
@@ -82,6 +82,47 @@ func (p *Poller) UpdateChannel(channel *Channel) {
 			pfd.Fd = -channel.Fd() - 1
 		}
 	}
+}
+
+func (p *Poller) RemoveChannel(channel *Channel) {
+	p.AssertInLoopGoroutine()
+	log.Printf("fd = %d\n", channel.Fd())
+	if _, ok := p.channels_[channel.Fd()]; !ok {
+		log.Panicf("Poller.RemoveChannel:channel not found\n")
+	}
+	if p.channels_[channel.Fd()] != channel {
+		log.Panicf("Poller.RemoveChannel:channel isn't the target channel\n ")
+	}
+	if !channel.IsNoneEvent() {
+		log.Panicf("Poller.RemoveChannel:channel isn't none event\n")
+	}
+	idx := channel.Index()
+	if idx < 0 || idx >= len(p.pollfds_) {
+		log.Panicf("Poller.RemoveChannel:channel's index is wrong\n")
+	}
+	pfd := p.pollfds_[idx]
+	if pfd.Fd != -channel.Fd()-1 || pfd.Events != channel.Events() {
+		log.Panicf("Poller.RemoveChannel:channel's data is wrong\n")
+	}
+	delete(p.channels_, channel.Fd())
+	if idx == len(p.pollfds_)-1 {
+		p.pollfds_ = p.pollfds_[:len(p.pollfds_)-1]
+	} else {
+		channelAtEnd := p.pollfds_[len(p.pollfds_)-1].Fd
+		target := p.pollfds_[idx]
+		end := p.pollfds_[len(p.pollfds_)-1]
+		//swap the tail and target channel
+		p.pollfds_[idx] = end
+		p.pollfds_[len(p.pollfds_)-1] = target
+
+		if channelAtEnd < 0 {
+			channelAtEnd = -channelAtEnd - 1
+		}
+		p.channels_[channelAtEnd].SetIndex(idx)
+
+		p.pollfds_ = p.pollfds_[:len(p.pollfds_)-1]
+	}
+
 }
 
 func (p *Poller) AssertInLoopGoroutine() {

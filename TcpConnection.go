@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"net-reactors/base/socket"
 	"net/netip"
 	"time"
 
@@ -13,6 +14,8 @@ import (
 const (
 	kConnecting = iota
 	kConnected
+	kDisconnected
+	kDisconnecting
 )
 
 type TcpConnection struct {
@@ -25,6 +28,7 @@ type TcpConnection struct {
 	peerAddr_           *netip.AddrPort
 	connectionCallback_ ConnectionCallback
 	messageCallback_    MessageCallback
+	closeCallback_      CloseCallback
 }
 
 // *************************
@@ -56,7 +60,11 @@ func (tc *TcpConnection) SetConnectionCallback(cb ConnectionCallback) {
 func (tc *TcpConnection) SetMessageCallback(cb MessageCallback) {
 	tc.messageCallback_ = cb
 }
+func (tc *TcpConnection) SetCloseCallback(cb CloseCallback) {
+	tc.closeCallback_ = cb
+}
 
+// called when TcpServer accepts a new connection
 func (tc *TcpConnection) ConnectEstablished() {
 	tc.loop_.AssertInLoopGoroutine()
 	if tc.state_ != kConnecting {
@@ -68,6 +76,19 @@ func (tc *TcpConnection) ConnectEstablished() {
 
 	//callback
 	tc.connectionCallback_(tc)
+}
+
+// called when TcpServer has removed me from it's map
+func (tc *TcpConnection) ConnectDestroyed() {
+	tc.loop_.AssertInLoopGoroutine()
+	if tc.state_ != kConnected {
+		log.Panicf("TcpConnection's state not kConnected\n")
+	}
+	tc.setState(kDisconnected)
+	tc.channel_.DisableAll()
+	tc.connectionCallback_(tc)
+
+	tc.channel_.Remove()
 }
 
 func (tc *TcpConnection) Connected() bool {
@@ -116,11 +137,24 @@ func (tc *TcpConnection) handleWrite() {
 }
 
 func (tc *TcpConnection) handleClose() {
-	fmt.Printf("handleClose\n")
+	tc.loop_.AssertInLoopGoroutine()
+	log.Printf("TcpConnection:handleClose connection's state = %d\n", tc.state_)
+	if tc.state_ != kConnected {
+		log.Panicf("TcpConnection:handleClose state isn't kConnected\n")
+	}
+
+	tc.channel_.DisableAll()
+
+	tc.closeCallback_(tc)
 }
 
 func (tc *TcpConnection) handleError() {
-	fmt.Printf("handleClose\n")
+	errno, err := socket.GetSocketError(tc.socketfd_)
+	if err != nil {
+		log.Printf("TcpConnection.handleError: get socket errno failed\n")
+	} else {
+		log.Printf("TcpConnection.handleError [%s] - SO_ERROR = %d\n", tc.name_, errno)
+	}
 }
 
 func (tc *TcpConnection) setState(s int) {

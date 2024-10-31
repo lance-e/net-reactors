@@ -76,5 +76,23 @@ func (t *TcpServer) newConnection(fd int, peerAddr *netip.AddrPort) {
 	t.connections_[t.name_] = conn
 	conn.SetConnectionCallback(t.connectionCallback_)
 	conn.SetMessageCallback(t.messageCallback_)
-	conn.ConnectEstablished()
+	conn.SetCloseCallback(t.removeConnection)
+
+	t.loop_.RunInLoop(conn.ConnectEstablished)
+}
+
+func (t *TcpServer) removeConnection(conn *TcpConnection) {
+	t.loop_.RunInLoop(t.bindRemoveConnection(conn))
+}
+
+func (t *TcpServer) bindRemoveConnection(conn *TcpConnection) func() {
+	return func() {
+		t.removeConnectionInLoop(conn)
+	}
+}
+func (t *TcpServer) removeConnectionInLoop(conn *TcpConnection) {
+	t.loop_.AssertInLoopGoroutine()
+	log.Printf("TcpServer:removeConnectionInLoop [%s] - connection [%s]\n", t.name_, conn.Name())
+	delete(t.connections_, conn.Name())
+	t.loop_.QueueInLoop(conn.ConnectDestroyed)
 }

@@ -60,6 +60,12 @@ func (c *Channel) HandleEvent() {
 	if c.revents_&unix.POLLNVAL != 0 {
 		fmt.Printf("WARN: Channel.HandleEvent POLLNVAL\n")
 	}
+
+	if (c.revents_&unix.POLLHUP != 0) && (c.revents_&unix.POLLIN == 0) {
+		if c.closeCallback_ != nil {
+			c.closeCallback_()
+		}
+	}
 	if c.revents_&(unix.POLLERR|unix.POLLNVAL) != 0 {
 		if c.errorCallback_ != nil {
 			c.errorCallback_()
@@ -80,7 +86,7 @@ func (c *Channel) Fd() int32 {
 	return c.fd_
 }
 
-func (c *Channel) events() int16 {
+func (c *Channel) Events() int16 {
 	return c.events_
 }
 
@@ -120,6 +126,9 @@ func (c *Channel) SetIndex(idx int) {
 
 func (c *Channel) OwnerLoop() *EventLoop {
 	return c.loop_
+}
+func (c *Channel) Remove() {
+	c.loop_.RemoveChannel(c)
 }
 
 // *************************

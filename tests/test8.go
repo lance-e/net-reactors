@@ -21,7 +21,7 @@ func onMessage(conn *netreactors.TcpConnection, buf *bytes.Buffer, t time.Time) 
 	fmt.Printf("onMessage: received %d bytes from connection [%s] \n", buf.Len(), conn.Name())
 }
 
-func main8() {
+func main() {
 	fmt.Printf("main: pid %d\n", os.Getpid())
 
 	addr := netip.MustParseAddrPort("127.0.0.1:80")

@@ -1,6 +1,7 @@
 package socket
 
 import (
+	"fmt"
 	"log"
 	"net/netip"
 	"syscall"
@@ -138,4 +139,13 @@ func GetPeerAddr(socketfd int) *netip.AddrPort {
 		log.Printf("GetPeerAddr: not support to handle other address family temporary\n")
 	}
 	return &addr
+}
+
+func GetSocketError(fd int) (int, error) {
+	opt, err := unix.GetsockoptInt(fd, unix.SOL_SOCKET, unix.SO_ERROR)
+	if err != nil {
+		fmt.Printf("GetSocketError: get soket option filed,error is %s\n", err.Error())
+		return -1, err
+	}
+	return opt, nil
 }
