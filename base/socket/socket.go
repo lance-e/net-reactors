@@ -68,10 +68,10 @@ func Accept4(fd int) (int, *netip.AddrPort) {
 		}
 		client = netip.AddrPortFrom(ip, uint16(addr.Port))
 	case *unix.SockaddrInet6:
-		log.Printf("Accept4:unsupport ipv6\n")
+		log.Printf("Accept4:don't handle ipv6\n")
 		break
 	case *unix.SockaddrUnix:
-		log.Printf("Accept4:unsupport unix family\n")
+		log.Printf("Accept4:don't handle unix family\n")
 		break
 	default:
 		log.Printf("Accept4: unknown socket address type\n")
@@ -98,4 +98,44 @@ func SetReusePort(fd int, isReuse bool) {
 	if err := unix.SetsockoptInt(fd, unix.SOL_SOCKET, unix.SO_REUSEPORT, opt); err != nil {
 		log.Printf("SetReusePort: set fd:%d reuse port failed\n", fd)
 	}
+}
+
+func GetLocalAddr(socketfd int) *netip.AddrPort {
+	sa, err := unix.Getsockname(socketfd)
+	if err != nil {
+		log.Printf("GetLocalAddr: get socket name failed\n")
+	}
+	var addr netip.AddrPort
+	switch a := sa.(type) {
+	case *unix.SockaddrInet4:
+		ip, ok := netip.AddrFromSlice(a.Addr[:])
+		if !ok {
+			log.Printf("GetLocalAddr: parse ip address failed\n")
+			break
+		}
+		addr = netip.AddrPortFrom(ip, uint16(a.Port))
+	default:
+		log.Printf("GetLocalAddr: not support to handle other address family temporary\n")
+	}
+	return &addr
+}
+
+func GetPeerAddr(socketfd int) *netip.AddrPort {
+	sa, err := unix.Getpeername(socketfd)
+	if err != nil {
+		log.Printf("GetPeerAddr: get socket name failed\n")
+	}
+	var addr netip.AddrPort
+	switch a := sa.(type) {
+	case *unix.SockaddrInet4:
+		ip, ok := netip.AddrFromSlice(a.Addr[:])
+		if !ok {
+			log.Printf("GetPeerAddr: parse ip address failed\n")
+			break
+		}
+		addr = netip.AddrPortFrom(ip, uint16(a.Port))
+	default:
+		log.Printf("GetPeerAddr: not support to handle other address family temporary\n")
+	}
+	return &addr
 }

@@ -22,6 +22,7 @@ type Channel struct {
 	readCallback_  EventCallback
 	writeCallback_ EventCallback
 	errorCallback_ EventCallback
+	closeCallback_ EventCallback
 }
 
 //*************************
@@ -48,6 +49,10 @@ func (c *Channel) SetWriteCallback(cb EventCallback) { //fix
 
 func (c *Channel) SetErrorCallback(cb EventCallback) { //fix
 	c.errorCallback_ = cb
+}
+
+func (c *Channel) SetCloseCallback(cb EventCallback) { //fix
+	c.closeCallback_ = cb
 }
 
 func (c *Channel) HandleEvent() {

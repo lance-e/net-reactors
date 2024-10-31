@@ -16,5 +16,5 @@ type (
 	ConnectionCallback    func(*TcpConnection)
 	CloseCallback         func(*TcpConnection)
 	WriteCompleteCallback func(*TcpConnection)
-	MessageCallback       func(*TcpConnection, bytes.Buffer, time.Time)
+	MessageCallback       func(*TcpConnection, *bytes.Buffer, time.Time)
 )

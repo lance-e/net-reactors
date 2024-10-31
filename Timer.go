@@ -1,7 +1,6 @@
 package netreactors
 
 import (
-	"net-reactors/base/util"
 	"sync/atomic"
 	"time"
 )
@@ -25,7 +24,7 @@ func NewTimerId(timer *Timer, seq int64) TimerId {
 //Timer
 
 type Timer struct {
-	callback_   util.TimerCallback
+	callback_   TimerCallback
 	expiration_ time.Time
 	interval_   float64
 	repeat_     bool
@@ -36,7 +35,7 @@ type Timer struct {
 // public:
 // *************************
 
-func NewTimer(cb util.TimerCallback, when time.Time, interval float64) *Timer {
+func NewTimer(cb TimerCallback, when time.Time, interval float64) *Timer {
 	return &Timer{
 		callback_:   cb,
 		expiration_: when,

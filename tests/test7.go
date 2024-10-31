@@ -17,7 +17,7 @@ func newConnetion(fd int, addr *netip.AddrPort) {
 	}
 }
 
-func main() {
+func main7() {
 	fmt.Printf("main: pid :%d\n", os.Getpid())
 	addr := netip.MustParseAddrPort("127.0.0.1:80")
 
