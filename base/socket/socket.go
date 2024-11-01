@@ -156,3 +156,25 @@ func ShutDown(fd int) {
 		fmt.Printf("Shutdown: shut down write failed , error is %s\n", err.Error())
 	}
 }
+
+func SetTcpNoDelay(fd int, on bool) {
+	opt := 0
+	if on {
+		opt = 1
+	}
+	err := unix.SetsockoptInt(fd, unix.IPPROTO_TCP, unix.TCP_NODELAY, opt)
+	if err != nil {
+		fmt.Printf("Socket.SetTcpNoDelay: set failed , error is [%s]\n", err.Error())
+	}
+}
+
+func SetKeepAlive(fd int, on bool) {
+	opt := 0
+	if on {
+		opt = 1
+	}
+	err := unix.SetsockoptInt(fd, unix.SOL_SOCKET, unix.SO_KEEPALIVE, opt)
+	if err != nil {
+		fmt.Printf("Socket.SetKeepAlive: set failed , error is [%s]\n", err.Error())
+	}
+}

@@ -52,6 +52,7 @@ func NewTcpConnection(loop *EventLoop, name string, fd int, localAddr *netip.Add
 	conn.channel_.SetErrorCallback(conn.handleError)
 	conn.channel_.SetCloseCallback(conn.handleClose)
 
+	socket.SetKeepAlive(conn.socketfd_, true) //set tcp keep alive
 	return
 }
 
@@ -77,6 +78,7 @@ func (tc *TcpConnection) SendFromBuffer(buf *Buffer) {
 	}
 }
 
+// ShutDown
 func (tc *TcpConnection) Shutdown() {
 	if tc.state_ == kConnected {
 		tc.setState(kDisconnecting)
@@ -84,6 +86,11 @@ func (tc *TcpConnection) Shutdown() {
 	}
 }
 
+func (tc *TcpConnection) SetTcpNoDelay(on bool) {
+	socket.SetTcpNoDelay(tc.socketfd_, on)
+}
+
+// set callback
 func (tc *TcpConnection) SetConnectionCallback(cb ConnectionCallback) {
 	tc.connectionCallback_ = cb
 }

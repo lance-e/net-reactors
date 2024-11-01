@@ -10,13 +10,17 @@ import (
 )
 
 var (
-	msg1 []byte
-	msg2 []byte
+	msg1      []byte
+	msg2      []byte
+	sleeptime time.Duration
 )
 
 func onConnection10(conn *netreactors.TcpConnection) {
 	if conn.Connected() {
 		fmt.Printf("onConnection(): new connection [%s] form %s\n", conn.Name(), conn.PeerAddr().String())
+		if sleeptime != 0 {
+			time.Sleep(sleeptime)
+		}
 		conn.Send(msg1)
 		conn.Send(msg2)
 		conn.Shutdown()
@@ -39,6 +43,8 @@ func main() {
 		len1, _ = strconv.Atoi(os.Args[1])
 		len2, _ = strconv.Atoi(os.Args[2])
 	}
+
+	sleeptime = 5 * time.Second
 
 	msg1 = make([]byte, len1)
 	msg2 = make([]byte, len2)

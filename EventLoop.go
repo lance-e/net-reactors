@@ -5,13 +5,21 @@ import (
 	"log"
 	"net-reactors/base/goroutine"
 	"net-reactors/base/util"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	"sync/atomic"
 
 	"golang.org/x/sys/unix"
 )
+
+// ignaore the SIGPIPE automatically ,you don't need care here
+var ignoreSIGPIPE = func() bool {
+	signal.Ignore(syscall.SIGPIPE)
+	return true
+}()
 
 const (
 	kPollTimeMs = 10000
