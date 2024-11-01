@@ -144,8 +144,15 @@ func GetPeerAddr(socketfd int) *netip.AddrPort {
 func GetSocketError(fd int) (int, error) {
 	opt, err := unix.GetsockoptInt(fd, unix.SOL_SOCKET, unix.SO_ERROR)
 	if err != nil {
-		fmt.Printf("GetSocketError: get soket option filed,error is %s\n", err.Error())
+		fmt.Printf("GetSocketError: get soket option filed , error is %s\n", err.Error())
 		return -1, err
 	}
 	return opt, nil
+}
+
+func ShutDown(fd int) {
+	err := unix.Shutdown(fd, unix.SHUT_WR)
+	if err != nil {
+		fmt.Printf("Shutdown: shut down write failed , error is %s\n", err.Error())
+	}
 }

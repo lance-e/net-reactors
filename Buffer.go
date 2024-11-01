@@ -98,14 +98,14 @@ func (b *Buffer) RetrieveAll() {
 	b.writerIndex_ = PrependSize
 }
 
-func (b *Buffer) RetrieveAllString() string {
+func (b *Buffer) RetrieveAllString() []byte {
 	return b.RetrieveAsString(b.ReadableBytes())
 }
-func (b *Buffer) RetrieveAsString(size int) string {
+func (b *Buffer) RetrieveAsString(size int) []byte {
 	if size > b.ReadableBytes() {
 		log.Panicf("Buffer.RetrieveAsString: size is more than readable bytes size\n")
 	}
-	ans := string(b.buffer_[b.readerIndex_ : b.readerIndex_+size])
+	ans := b.buffer_[b.readerIndex_ : b.readerIndex_+size]
 	b.Retrieve(size)
 	return ans
 }

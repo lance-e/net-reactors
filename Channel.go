@@ -98,6 +98,7 @@ func (c *Channel) SetRevents(revt int16) {
 func (c *Channel) IsNoneEvent() bool {
 	return c.events_ == kNoneEvent
 }
+
 func (c *Channel) EnableReading() {
 	c.events_ |= kReadEvent
 	c.update()
@@ -118,6 +119,15 @@ func (c *Channel) DisableAll() {
 	c.events_ = kNoneEvent
 	c.update()
 }
+
+func (c *Channel) IsReading() bool {
+	return c.events_&kReadEvent != 0
+}
+
+func (c *Channel) IsWriting() bool {
+	return c.events_&kWriteEvent != 0
+}
+
 func (c *Channel) Index() int {
 	return c.index_
 }
