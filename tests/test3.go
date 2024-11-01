@@ -3,18 +3,20 @@ package main
 import (
 	"fmt"
 	netreactors "net-reactors"
+	"time"
 
 	"golang.org/x/sys/unix"
 )
 
 var gLoop3 *netreactors.EventLoop
 
-func timeout() {
-	fmt.Printf("Timeout!!!\n")
+func timeout(t time.Time) {
+	fmt.Printf("%s timeout!\n", t.Format("2006-01-02 15:04:05"))
 	gLoop3.Quit()
 }
 
 func main3() {
+	fmt.Printf("%s started!\n", time.Now().Format("2006-01-02 15:04:05"))
 	loop := netreactors.NewEventLoop()
 	gLoop3 = loop
 	timerfd, err := unix.TimerfdCreate(unix.CLOCK_MONOTONIC, unix.TFD_NONBLOCK|unix.TFD_CLOEXEC)

@@ -74,9 +74,9 @@ func (loop *EventLoop) Loop() {
 
 	for loop.quit_ == 0 {
 		loop.activeChannels = loop.activeChannels[:0]
-		loop.poller_.Poll(kPollTimeMs, &loop.activeChannels)
+		pollReturnTime := loop.poller_.Poll(kPollTimeMs, &loop.activeChannels)
 		for i := 0; i < len(loop.activeChannels); i++ {
-			loop.activeChannels[i].HandleEvent()
+			loop.activeChannels[i].HandleEvent(pollReturnTime)
 		}
 
 		//the time to call DoPendingFunctors: make sure only in the event's callback that don't need to wakeup()
@@ -195,7 +195,7 @@ func (loop *EventLoop) abortNotInLoopGoroutine() {
 }
 
 // wake up
-func (loop *EventLoop) HandleRead() {
+func (loop *EventLoop) HandleRead(t time.Time) {
 	var buf [8]byte
 	//will read out the number of write event from eventfd's counter   into buf
 	//such as: 5 times of write to eventfd , will read 5 ,and set the eventfd's counter to zere

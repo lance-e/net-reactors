@@ -47,7 +47,7 @@ func NewTimerQueue(loop *EventLoop) (tq *TimerQueue) {
 }
 
 // called when timer alarms
-func (tq *TimerQueue) HandleRead() {
+func (tq *TimerQueue) HandleRead(t time.Time) {
 	tq.loop_.AssertInLoopGoroutine()
 	now := time.Now()
 	util.ReadTimerfd(tq.timerfd_, now)

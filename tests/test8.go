@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	netreactors "net-reactors"
 	"net/netip"
@@ -17,11 +16,12 @@ func onConnection(conn *netreactors.TcpConnection) {
 	}
 }
 
-func onMessage(conn *netreactors.TcpConnection, buf *bytes.Buffer, t time.Time) {
-	fmt.Printf("onMessage: received %d bytes from connection [%s] \n", buf.Len(), conn.Name())
+func onMessage(conn *netreactors.TcpConnection, buf *netreactors.Buffer, t time.Time) {
+	fmt.Printf("onMessage: received %d bytes from connection [%s] at time-[%s]\n", buf.ReadableBytes(), conn.Name(), t.Format("2006-01-02 15:04:05"))
+	fmt.Printf("onMessage: [%s]\n", buf.RetrieveAllString())
 }
 
-func main() {
+func main8() {
 	fmt.Printf("main: pid %d\n", os.Getpid())
 
 	addr := netip.MustParseAddrPort("127.0.0.1:80")

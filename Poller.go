@@ -2,6 +2,7 @@ package netreactors
 
 import (
 	"log"
+	"time"
 
 	"golang.org/x/sys/unix"
 )
@@ -29,17 +30,19 @@ func NewPoller(loop *EventLoop) *Poller {
 	}
 }
 
-func (p *Poller) Poll(timeoutMs int, activeChannels *[]*Channel) {
+func (p *Poller) Poll(timeoutMs int, activeChannels *[]*Channel) time.Time {
 	n, err := unix.Poll(p.pollfds_, timeoutMs)
 	if err != nil || n < 0 {
 		log.Panicf("Poller.Poll failed ,n:%d , err:%s \n", n, err.Error())
 	}
+	now := time.Now()
 	if n > 0 {
 		log.Printf("%d events happended\n", n)
 		p.fillActiveChannels(n, activeChannels)
 	} else if n == 0 {
 		log.Printf("nothing happended\n")
 	}
+	return now
 }
 
 func (p *Poller) UpdateChannel(channel *Channel) {

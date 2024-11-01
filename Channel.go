@@ -2,6 +2,7 @@ package netreactors
 
 import (
 	"fmt"
+	"time"
 
 	"golang.org/x/sys/unix"
 )
@@ -19,7 +20,7 @@ type Channel struct {
 	revents_ int16
 	index_   int
 
-	readCallback_  EventCallback
+	readCallback_  ReadEventCallback
 	writeCallback_ EventCallback
 	errorCallback_ EventCallback
 	closeCallback_ EventCallback
@@ -39,7 +40,7 @@ func NewChannel(loop *EventLoop, fdArg int32) *Channel {
 	}
 }
 
-func (c *Channel) SetReadCallback(cb EventCallback) { //fix
+func (c *Channel) SetReadCallback(cb ReadEventCallback) { //fix
 	c.readCallback_ = cb
 }
 
@@ -55,7 +56,7 @@ func (c *Channel) SetCloseCallback(cb EventCallback) { //fix
 	c.closeCallback_ = cb
 }
 
-func (c *Channel) HandleEvent() {
+func (c *Channel) HandleEvent(time time.Time) {
 	//determine whether fd is valid
 	if c.revents_&unix.POLLNVAL != 0 {
 		fmt.Printf("WARN: Channel.HandleEvent POLLNVAL\n")
@@ -73,7 +74,7 @@ func (c *Channel) HandleEvent() {
 	}
 	if c.revents_&(unix.POLLIN|unix.POLLPRI|unix.POLLRDHUP) != 0 {
 		if c.readCallback_ != nil {
-			c.readCallback_()
+			c.readCallback_(time)
 		}
 	}
 	if c.revents_&(unix.POLLOUT) != 0 {

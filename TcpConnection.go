@@ -1,14 +1,11 @@
 package netreactors
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"net-reactors/base/socket"
 	"net/netip"
 	"time"
-
-	"golang.org/x/sys/unix"
 )
 
 const (
@@ -29,6 +26,8 @@ type TcpConnection struct {
 	connectionCallback_ ConnectionCallback
 	messageCallback_    MessageCallback
 	closeCallback_      CloseCallback
+	inBuffer_           *Buffer
+	outBuffer_          *Buffer
 }
 
 // *************************
@@ -43,6 +42,8 @@ func NewTcpConnection(loop *EventLoop, name string, fd int, localAddr *netip.Add
 		channel_:   NewChannel(loop, int32(fd)),
 		localAddr_: localAddr,
 		peerAddr_:  peerAddr,
+		inBuffer_:  NewBuffer(),
+		outBuffer_: NewBuffer(),
 	}
 
 	conn.channel_.SetReadCallback(conn.handleRead)
@@ -117,18 +118,17 @@ func (tc *TcpConnection) PeerAddr() *netip.AddrPort {
 /* func (tc *TcpConnection) bindHandleRead() func() { */
 /*  */
 /* } */
-func (tc *TcpConnection) handleRead() {
+func (tc *TcpConnection) handleRead(time time.Time) {
 	tc.loop_.AssertInLoopGoroutine()
-
-	buf := make([]byte, 65535)
-	n, err := unix.Read(int(tc.channel_.Fd()), buf)
-	if err != nil || n < 0 {
-		log.Printf("TcpConnection.handleRead: read failed,err:%s\n", err.Error())
-		tc.handleError()
+	var saveErrno error
+	n := tc.inBuffer_.ReadFd(tc.socketfd_, &saveErrno)
+	if n > 0 {
+		tc.messageCallback_(tc, tc.inBuffer_, time) //get time by argument
 	} else if n == 0 {
 		tc.handleClose()
 	} else {
-		tc.messageCallback_(tc, bytes.NewBuffer(buf[:n]), time.Now()) //get time by argument
+		log.Printf("TcpConnection.handleRead: read failed,err:%s\n", saveErrno.Error())
+		tc.handleError()
 	}
 }
 
