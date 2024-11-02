@@ -27,7 +27,7 @@ func main9() {
 	addr := netip.MustParseAddrPort("127.0.0.1:80")
 	loop := netreactors.NewEventLoop()
 
-	server := netreactors.NewTcpServer(loop, &addr, "test8_server")
+	server := netreactors.NewTcpServer(loop, &addr, "test9_server")
 	server.SetConnectionCallback(onConnection9)
 	server.SetMessageCallback(onMessage9)
 

@@ -150,7 +150,7 @@ func GetSocketError(fd int) (int, error) {
 	return opt, nil
 }
 
-func ShutDown(fd int) {
+func ShutDownWrite(fd int) {
 	err := unix.Shutdown(fd, unix.SHUT_WR)
 	if err != nil {
 		fmt.Printf("Shutdown: shut down write failed , error is %s\n", err.Error())

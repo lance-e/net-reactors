@@ -33,7 +33,7 @@ func onMessage10(conn *netreactors.TcpConnection, buf *netreactors.Buffer, t tim
 	fmt.Printf("onMessage: received %d bytes from connection [%s] at time-[%s]\n", buf.ReadableBytes(), conn.Name(), t.Format("2006-01-02 15:04:05"))
 	buf.RetrieveAll()
 }
-func main() {
+func main10() {
 	fmt.Printf("main: pid %d\n", os.Getpid())
 
 	len1 := 100
@@ -60,7 +60,7 @@ func main() {
 	addr := netip.MustParseAddrPort("127.0.0.1:80")
 	loop := netreactors.NewEventLoop()
 
-	server := netreactors.NewTcpServer(loop, &addr, "test8_server")
+	server := netreactors.NewTcpServer(loop, &addr, "test10_server")
 	server.SetConnectionCallback(onConnection10)
 	server.SetMessageCallback(onMessage10)
 

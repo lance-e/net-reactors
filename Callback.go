@@ -17,4 +17,5 @@ type (
 	CloseCallback         func(*TcpConnection)
 	WriteCompleteCallback func(*TcpConnection)
 	MessageCallback       func(*TcpConnection, *Buffer, time.Time)
+	HighWaterMarkCallback func(*TcpConnection, int)
 )

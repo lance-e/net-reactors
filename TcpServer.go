@@ -9,26 +9,30 @@ import (
 )
 
 type TcpServer struct {
-	loop_               *EventLoop
-	name_               string
-	acceptor_           *Acceptor
-	started_            int64 //atomic
-	connectionCallback_ ConnectionCallback
-	messageCallback_    MessageCallback
-	nextConnId          int
-	connections_        map[string]*TcpConnection
+	loop_        *EventLoop
+	name_        string
+	acceptor_    *Acceptor
+	started_     int64 //atomic
+	nextConnId   int
+	connections_ map[string]*TcpConnection
+
+	connectionCallback_    ConnectionCallback
+	messageCallback_       MessageCallback
+	writeCompleteCallback_ WriteCompleteCallback
 }
 
 func NewTcpServer(loop *EventLoop, addr *netip.AddrPort, name string) (server *TcpServer) {
 	server = &TcpServer{
-		loop_:               loop,
-		name_:               name,
-		acceptor_:           NewAcceptor(loop, addr, false),
-		started_:            0,
-		connectionCallback_: nil,
-		messageCallback_:    nil,
-		nextConnId:          1,
-		connections_:        make(map[string]*TcpConnection, 0),
+		loop_:        loop,
+		name_:        name,
+		acceptor_:    NewAcceptor(loop, addr, false),
+		started_:     0,
+		nextConnId:   1,
+		connections_: make(map[string]*TcpConnection, 0),
+
+		connectionCallback_:    nil,
+		messageCallback_:       nil,
+		writeCompleteCallback_: nil,
 	}
 
 	//set callback when new connection coming
@@ -55,9 +59,11 @@ func (t *TcpServer) Start() {
 func (t *TcpServer) SetConnectionCallback(cb ConnectionCallback) {
 	t.connectionCallback_ = cb
 }
-
 func (t *TcpServer) SetMessageCallback(cb MessageCallback) {
 	t.messageCallback_ = cb
+}
+func (t *TcpServer) SetWriteCompleteCallback(cb WriteCompleteCallback) {
+	t.writeCompleteCallback_ = cb
 }
 
 // *************************
@@ -77,6 +83,7 @@ func (t *TcpServer) newConnection(fd int, peerAddr *netip.AddrPort) {
 	conn.SetConnectionCallback(t.connectionCallback_)
 	conn.SetMessageCallback(t.messageCallback_)
 	conn.SetCloseCallback(t.removeConnection)
+	conn.SetWriteCompleteCallback(t.writeCompleteCallback_)
 
 	t.loop_.RunInLoop(conn.ConnectEstablished)
 }

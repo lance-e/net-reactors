@@ -17,18 +17,23 @@ const (
 )
 
 type TcpConnection struct {
-	loop_               *EventLoop
-	name_               string
-	state_              int
-	socketfd_           int
-	channel_            *Channel
-	localAddr_          *netip.AddrPort
-	peerAddr_           *netip.AddrPort
-	connectionCallback_ ConnectionCallback
-	messageCallback_    MessageCallback
-	closeCallback_      CloseCallback
-	inBuffer_           *Buffer
-	outBuffer_          *Buffer
+	loop_     *EventLoop
+	name_     string
+	state_    int
+	socketfd_ int
+	channel_  *Channel
+
+	localAddr_ *netip.AddrPort
+	peerAddr_  *netip.AddrPort
+
+	connectionCallback_    ConnectionCallback
+	messageCallback_       MessageCallback
+	closeCallback_         CloseCallback
+	highWaterMarkCallback_ HighWaterMarkCallback
+	writeCompleteCallback_ WriteCompleteCallback
+
+	inBuffer_  *Buffer
+	outBuffer_ *Buffer
 }
 
 // *************************
@@ -99,6 +104,17 @@ func (tc *TcpConnection) SetMessageCallback(cb MessageCallback) {
 }
 func (tc *TcpConnection) SetCloseCallback(cb CloseCallback) {
 	tc.closeCallback_ = cb
+}
+func (tc *TcpConnection) SetHighWaterMarkCallback(cb HighWaterMarkCallback) {
+	tc.highWaterMarkCallback_ = cb
+}
+func (tc *TcpConnection) SetWriteCompleteCallback(cb WriteCompleteCallback) {
+	tc.writeCompleteCallback_ = cb
+}
+func (tc *TcpConnection) BindWriteCompleteCallback() func() {
+	return func() {
+		tc.writeCompleteCallback_(tc)
+	}
 }
 
 // called when TcpServer accepts a new connection
@@ -176,11 +192,13 @@ func (tc *TcpConnection) handleWrite() {
 	tc.loop_.AssertInLoopGoroutine()
 	if tc.channel_.IsWriting() {
 		n, err := unix.Write(int(tc.channel_.Fd()), tc.outBuffer_.buffer_[tc.outBuffer_.readerIndex_:tc.outBuffer_.writerIndex_])
-		if n > 0 {
+		if n >= 0 {
 			tc.outBuffer_.Retrieve(n)
 			if tc.outBuffer_.ReadableBytes() == 0 {
 				tc.channel_.DisableWriting()
-				//todo
+				if tc.writeCompleteCallback_ != nil {
+					tc.loop_.QueueInLoop(tc.BindWriteCompleteCallback())
+				}
 			}
 
 			if tc.state_ == kDisconnecting {
@@ -226,6 +244,8 @@ func (tc *TcpConnection) sendInLoop(msg []byte) {
 	tc.loop_.AssertInLoopGoroutine()
 
 	var n int
+	var remaining = len(msg)
+	faultError := false
 	var err error
 	if tc.state_ == kDisconnected {
 		log.Printf("disconnected , stop writing...\n")
@@ -234,16 +254,27 @@ func (tc *TcpConnection) sendInLoop(msg []byte) {
 	if !tc.channel_.IsWriting() && tc.outBuffer_.ReadableBytes() == 0 {
 		n, err = unix.Write(int(tc.channel_.Fd()), msg)
 		if n >= 0 {
-			//handle other case
+			remaining = len(msg) - n
+			if n < len(msg) {
+				log.Printf("I am going to write more data\n")
+			} else if tc.writeCompleteCallback_ != nil {
+				tc.loop_.QueueInLoop(tc.BindWriteCompleteCallback())
+			}
 		} else {
 			n = 0
 			if err != unix.EWOULDBLOCK {
 				log.Printf("TcpConnection.sendInLoop error [%s]\n", err.Error())
+				if err == unix.EPIPE || err == unix.ECONNRESET {
+					faultError = true
+				}
 			}
 		}
 	}
 
-	if n < len(msg) {
+	if !faultError && remaining > 0 {
+		//todo:
+		//run highWaterMarkCallback_
+
 		tc.outBuffer_.buffer_ = append(tc.outBuffer_.buffer_, msg[n:]...)
 		if !tc.channel_.IsWriting() {
 			tc.channel_.EnableWriting()
@@ -253,7 +284,7 @@ func (tc *TcpConnection) sendInLoop(msg []byte) {
 func (tc *TcpConnection) shutdownInLoop() {
 	tc.loop_.AssertInLoopGoroutine()
 	if !tc.channel_.IsWriting() {
-		socket.ShutDown(tc.socketfd_)
+		socket.ShutDownWrite(tc.socketfd_)
 	}
 }
 
