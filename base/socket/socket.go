@@ -43,19 +43,25 @@ func Accept4(fd int) (int, *netip.AddrPort) {
 		case syscall.EPROTO:
 		case syscall.EPERM:
 		case syscall.EMFILE:
-			//the above are expected error
-			break
+			//the above are expected error ,so ignore
 		case syscall.EBADF:
+			log.Fatalf("Accept4: unexpected error of accept ,error:%s\n", err.Error())
 		case syscall.EFAULT:
+			log.Fatalf("Accept4: unexpected error of accept ,error:%s\n", err.Error())
 		case syscall.EINVAL:
+			log.Fatalf("Accept4: unexpected error of accept ,error:%s\n", err.Error())
 		case syscall.ENFILE:
+			log.Fatalf("Accept4: unexpected error of accept ,error:%s\n", err.Error())
 		case syscall.ENOBUFS:
+			log.Fatalf("Accept4: unexpected error of accept ,error:%s\n", err.Error())
 		case syscall.ENOMEM:
+			log.Fatalf("Accept4: unexpected error of accept ,error:%s\n", err.Error())
 		case syscall.ENOTSOCK:
+			log.Fatalf("Accept4: unexpected error of accept ,error:%s\n", err.Error())
 		case syscall.EOPNOTSUPP:
 			log.Fatalf("Accept4: unexpected error of accept ,error:%s\n", err.Error())
-			break
 		default:
+			log.Fatalf("Accept4: unknown error of accept ,error:%s\n", err.Error())
 
 		}
 	}
@@ -79,6 +85,14 @@ func Accept4(fd int) (int, *netip.AddrPort) {
 	}
 
 	return nfd, &client
+}
+
+func Connect(fd int, addr *netip.AddrPort) error {
+	err := unix.Connect(fd, &unix.SockaddrInet4{
+		Addr: addr.Addr().As4(),
+		Port: int(addr.Port()),
+	})
+	return err
 }
 
 func SetReuseAddr(fd int, isReuse bool) {
@@ -139,6 +153,12 @@ func GetPeerAddr(socketfd int) *netip.AddrPort {
 		log.Printf("GetPeerAddr: not support to handle other address family temporary\n")
 	}
 	return &addr
+}
+
+func IsSelfConnect(fd int) bool {
+	local := GetLocalAddr(fd)
+	peer := GetPeerAddr(fd)
+	return local.Compare(*peer) == 0
 }
 
 func GetSocketError(fd int) (int, error) {

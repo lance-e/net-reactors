@@ -16,15 +16,15 @@ type EventLoopGoroutine struct {
 // public:
 // *************************
 
-func NewEventLoopGoroutine(cb GoroutineCallback) (elg EventLoopGoroutine) {
-	elg = EventLoopGoroutine{
+func NewEventLoopGoroutine(cb GoroutineCallback) (elg *EventLoopGoroutine) {
+	elg = &EventLoopGoroutine{
 		loop_:     nil,
 		mutex_:    &sync.Mutex{},
 		exiting_:  false,
 		callback_: cb,
 	}
 	elg.cond_ = sync.NewCond(elg.mutex_)
-	return elg
+	return
 }
 
 func (elg *EventLoopGoroutine) StartLoop() *EventLoop {

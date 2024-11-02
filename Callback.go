@@ -6,12 +6,13 @@ import (
 )
 
 type (
-	EventCallback         func()
-	ReadEventCallback     func(time.Time)
-	TimerCallback         func()
-	Functor               func()
-	GoroutineCallback     func(*EventLoop)
-	NewConnectionCallback func(int, *netip.AddrPort)
+	EventCallback                  func()
+	ReadEventCallback              func(time.Time)
+	TimerCallback                  func()
+	Functor                        func()
+	GoroutineCallback              func(*EventLoop)
+	AcceptorNewConnectionCallback  func(int, *netip.AddrPort)
+	ConnectorNewConnectionCallback func(int)
 	//TcpConnection
 	ConnectionCallback    func(*TcpConnection)
 	CloseCallback         func(*TcpConnection)

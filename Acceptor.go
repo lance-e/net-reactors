@@ -10,11 +10,11 @@ import (
 )
 
 type Acceptor struct {
-	loop_                  *EventLoop
-	socketfd_              int
-	acceptChannel_         *Channel
-	newConnectionCallback_ NewConnectionCallback
-	listening_             bool
+	loop_                          *EventLoop
+	socketfd_                      int
+	acceptChannel_                 *Channel
+	acceptorNewConnectionCallback_ AcceptorNewConnectionCallback
+	listening_                     bool
 }
 
 // *************************
@@ -30,11 +30,11 @@ func NewAcceptor(loop *EventLoop, listenAddr *netip.AddrPort, reusePort bool) (a
 
 	//acceptor object
 	ac = &Acceptor{
-		loop_:                  loop,
-		socketfd_:              fd,
-		acceptChannel_:         NewChannel(loop, int32(fd)),
-		newConnectionCallback_: nil,
-		listening_:             false,
+		loop_:                          loop,
+		socketfd_:                      fd,
+		acceptChannel_:                 NewChannel(loop, int32(fd)),
+		acceptorNewConnectionCallback_: nil,
+		listening_:                     false,
 	}
 
 	//set channel
@@ -42,8 +42,8 @@ func NewAcceptor(loop *EventLoop, listenAddr *netip.AddrPort, reusePort bool) (a
 	return
 }
 
-func (a *Acceptor) SetNewConnectionCallback(cb NewConnectionCallback) {
-	a.newConnectionCallback_ = cb
+func (a *Acceptor) SetAcceptorNewConnectionCallback(cb AcceptorNewConnectionCallback) {
+	a.acceptorNewConnectionCallback_ = cb
 }
 
 func (a *Acceptor) Listen() {
@@ -65,8 +65,8 @@ func (a *Acceptor) handleRead(time time.Time) {
 	a.loop_.AssertInLoopGoroutine()
 	connfd, addr := socket.Accept4(a.socketfd_)
 	if connfd >= 0 {
-		if a.newConnectionCallback_ != nil {
-			a.newConnectionCallback_(connfd, addr)
+		if a.acceptorNewConnectionCallback_ != nil {
+			a.acceptorNewConnectionCallback_(connfd, addr)
 		} else {
 			unix.Close(connfd)
 		}

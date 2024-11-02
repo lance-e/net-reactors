@@ -5,6 +5,7 @@ import (
 	netreactors "net-reactors"
 	"net/netip"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -53,6 +54,11 @@ func main11() {
 	server.SetConnectionCallback(onConnection11)
 	server.SetMessageCallback(onMessage11)
 	server.SetWriteCompleteCallback(onWrtiecomplete11)
+
+	if len(os.Args) > 1 {
+		num, _ := strconv.Atoi(os.Args[1])
+		server.SetGoroutineNum(num)
+	}
 
 	server.Start()
 
