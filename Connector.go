@@ -1,7 +1,6 @@
 package netreactors
 
 import (
-	"fmt"
 	"log"
 	"net-reactors/base/socket"
 	"net/netip"
@@ -90,10 +89,8 @@ func (c *Connector) stopInLoop() {
 }
 
 func (c *Connector) connect() {
-	fmt.Printf("connect()\n")
 	fd := socket.CreateNonBlockOrDie()
 	err := socket.Connect(fd, c.serverAddr_)
-	fmt.Printf("err : [%d]\n", err)
 	switch err.(unix.Errno) {
 	case 0:
 		c.connecting(fd)
@@ -146,7 +143,6 @@ func (c *Connector) connect() {
 }
 
 func (c *Connector) connecting(fd int) {
-	fmt.Printf("connecting()\n")
 	c.setState(kConnecting)
 	if c.channel_ != nil {
 		log.Panicf("Connector.connecting: channel already set\n")

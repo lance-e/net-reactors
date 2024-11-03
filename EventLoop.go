@@ -169,6 +169,10 @@ func (loop *EventLoop) DoPendingFunctors() {
 	atomic.StoreInt64(&loop.callingPendingFunctors_, 0)
 }
 
+func (loop *EventLoop) Cancel(timerid TimerId) {
+	loop.timerQueue_.Cancel(timerid)
+}
+
 func (loop *EventLoop) Wakeup() {
 	var one uint64 = 1
 	n, err := unix.Write(loop.wakeupFd_, []byte{

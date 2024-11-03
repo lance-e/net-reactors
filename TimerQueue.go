@@ -15,8 +15,8 @@ type TimerQueue struct {
 	timeChannel_          *Channel
 	timerfd_              int
 	timers_               TimerList //timer set
-	activeTimers_         map[*Timer]struct{}
-	cancelingTimers_      map[*Timer]struct{}
+	activeTimers_         map[*Timer]int64
+	cancelingTimers_      map[*Timer]int64
 	callingExpiredTimers_ int64 //atomic
 }
 
@@ -35,8 +35,8 @@ func NewTimerQueue(loop *EventLoop) (tq *TimerQueue) {
 		timeChannel_:          NewChannel(loop, int32(tfd)),
 		timerfd_:              tfd,
 		timers_:               make(TimerList, 0),
-		activeTimers_:         make(map[*Timer]struct{}, 0),
-		cancelingTimers_:      make(map[*Timer]struct{}, 0),
+		activeTimers_:         make(map[*Timer]int64, 0),
+		cancelingTimers_:      make(map[*Timer]int64, 0),
 		callingExpiredTimers_: 0,
 	}
 
@@ -60,7 +60,7 @@ func (tq *TimerQueue) HandleRead(t time.Time) {
 
 	atomic.StoreInt64(&tq.callingExpiredTimers_, 1)
 	//clear cancelingTimers_
-	tq.cancelingTimers_ = make(map[*Timer]struct{}, 0)
+	tq.cancelingTimers_ = make(map[*Timer]int64, 0)
 
 	for _, entry := range expired {
 		entry.timer_.Run()
@@ -137,10 +137,23 @@ func (tq *TimerQueue) bindCancelTimerInLoop(timerid TimerId) func() {
 func (tq *TimerQueue) cancelTimerInLoop(timerid TimerId) {
 	tq.loop_.AssertInLoopGoroutine()
 	if tq.timers_.Len() != len(tq.activeTimers_) {
-		log.Panicf("cancelTimerInLoop: the length of timers_ and activeTimers_ is not same\n")
+		log.Panicf("TimerQueue.cancelTimerInLoop(): the length of timers_ and activeTimers_ is not same\n")
 	}
-	//todo
 
+	if _, ok := tq.activeTimers_[timerid.Timer_]; ok {
+		for i, v := range tq.timers_ {
+			if v.timer_.Expiration() == timerid.Timer_.Expiration() && v.timer_.Sequence() == timerid.Sequence_ {
+				heap.Remove(&tq.timers_, i)
+			}
+		}
+		delete(tq.activeTimers_, timerid.Timer_)
+	} else if atomic.LoadInt64(&tq.callingExpiredTimers_) == 1 {
+		tq.cancelingTimers_[timerid.Timer_] = timerid.Sequence_
+	}
+
+	if tq.timers_.Len() != int(len(tq.activeTimers_)) {
+		log.Panicf("TimerQueue.cancelTimerInLoop(): the length of timers_ and activeTimers_ is not same\n")
+	}
 }
 
 func (tq *TimerQueue) reset(expired []TimeEntry, now time.Time) {
@@ -182,7 +195,7 @@ func (tq *TimerQueue) insert(timer *Timer) bool {
 	}
 	//insert
 	heap.Push(&tq.timers_, entry)
-	tq.activeTimers_[timer] = struct{}{}
+	tq.activeTimers_[timer] = timer.Sequence()
 	if tq.timers_.Len() != len(tq.activeTimers_) {
 		log.Panicf("insert: the length of timers_ and activeTimers_ is not same\n")
 	}

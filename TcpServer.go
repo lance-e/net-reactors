@@ -6,6 +6,7 @@ import (
 	"net-reactors/base/socket"
 	"net/netip"
 	"sync/atomic"
+	"time"
 )
 
 type TcpServer struct {
@@ -13,7 +14,7 @@ type TcpServer struct {
 	name_          string
 	acceptor_      *Acceptor
 	started_       int64 //atomic
-	nextConnId     int
+	nextConnId_    int
 	connections_   map[string]*TcpConnection
 	goroutinePool_ *EventLoopGoroutinePool
 
@@ -29,12 +30,12 @@ func NewTcpServer(loop *EventLoop, addr *netip.AddrPort, name string) (server *T
 		name_:          name,
 		acceptor_:      NewAcceptor(loop, addr, false),
 		started_:       0,
-		nextConnId:     1,
+		nextConnId_:    1,
 		connections_:   make(map[string]*TcpConnection, 0),
 		goroutinePool_: NewEventLoopGoroutinePool(loop),
 
-		connectionCallback_:    nil,
-		messageCallback_:       nil,
+		connectionCallback_:    func(tc *TcpConnection) {},
+		messageCallback_:       func(tc *TcpConnection, b *Buffer, t time.Time) {},
 		writeCompleteCallback_: nil,
 		goroutineCallback_:     nil,
 	}
@@ -92,8 +93,8 @@ func (t *TcpServer) newConnection(fd int, peerAddr *netip.AddrPort) {
 	ioLoop := t.goroutinePool_.GetNextLoop()
 
 	//to create new connection
-	connName := fmt.Sprintf(t.name_+"#%d", t.nextConnId)
-	t.nextConnId++
+	connName := fmt.Sprintf(t.name_+"#%d", t.nextConnId_)
+	t.nextConnId_++
 	log.Printf("TcpServer:newConnection [%s] - new connection [%s] from %s\n", t.name_, connName, peerAddr.String())
 
 	//create new connection and set it's attribute

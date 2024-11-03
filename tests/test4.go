@@ -10,6 +10,7 @@ import (
 
 var gloop4 *netreactors.EventLoop
 var count int
+var toCancel netreactors.TimerId
 
 func printTid() {
 	fmt.Printf("pid = %d , goid = %d \n ", os.Getpid(), goroutine.GetGoid())
@@ -29,6 +30,11 @@ func print(msg string) {
 	}
 }
 
+func cancleSelf() {
+	fmt.Printf("cancleSelf\n")
+	gloop4.Cancel(toCancel)
+}
+
 func main4() {
 	printTid()
 	loop := netreactors.NewEventLoop()
@@ -43,6 +49,8 @@ func main4() {
 	loop.RunAfter(time.Duration(3.5*float64(time.Second)), bindPrint("once3.5"))
 	loop.RunEvery(float64(2*time.Second), bindPrint("every2"))
 	loop.RunEvery(float64(3*time.Second), bindPrint("every3"))
+
+	// toCancel = loop.RunEvery(float64(5*time.Second), cancleSelf)
 
 	loop.Loop()
 	fmt.Printf("main EventLoop stop looping\n")
