@@ -23,7 +23,7 @@ func BindOrDie(fd int, addr *netip.AddrPort) {
 		Addr: addr.Addr().As4(),
 		Port: int(addr.Port()),
 	}); err != nil {
-		log.Panicf("BindOrDie:bind socketfd:%d failed\n", fd)
+		log.Panicf("BindOrDie:bind socketfd [%d] failed ,error is [%s]\n", fd, err.Error())
 	}
 }
 
