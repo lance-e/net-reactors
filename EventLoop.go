@@ -31,7 +31,7 @@ type EventLoop struct {
 	callingPendingFunctors_ int64 //atomic
 	goroutineId_            int64
 	wakeupFd_               int
-	poller_                 *Poller
+	poller_                 Poller
 	timerQueue_             *TimerQueue
 	wakeupChannel           *Channel
 	activeChannels          []*Channel
@@ -62,7 +62,7 @@ func NewEventLoop() (el *EventLoop) {
 	el.wakeupFd_ = eventfd
 
 	//must set the  ownerLoop_ by transfer argument
-	el.poller_ = NewPoller(el)
+	el.poller_ = NewDefaultPoller(el)
 	el.timerQueue_ = NewTimerQueue(el)
 	el.wakeupChannel = NewChannel(el, int32(eventfd))
 

@@ -24,7 +24,7 @@ func main7() {
 	loop := netreactors.NewEventLoop()
 
 	acceptor := netreactors.NewAcceptor(loop, &addr, false)
-	acceptor.SetNewConnectionCallback(newConnetion)
+	acceptor.SetAcceptorNewConnectionCallback(newConnetion)
 	acceptor.Listen()
 
 	loop.Loop()
