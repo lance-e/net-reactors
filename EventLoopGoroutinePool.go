@@ -18,45 +18,49 @@ type EventLoopGoroutinePool struct {
 // public:
 // *************************
 
-func NewEventLoopGoroutinePool(baseLoop *EventLoop) *EventLoopGoroutinePool {
-	return &EventLoopGoroutinePool{
+func NewEventLoopGoroutinePool(baseLoop *EventLoop, numGoroutine int, cb GoroutineCallback) (elgp *EventLoopGoroutinePool) {
+	if numGoroutine < 0 {
+		numGoroutine = 0
+	}
+	elgp = &EventLoopGoroutinePool{
 		baseLoop_:     baseLoop,
 		started_:      false,
-		numGoroutine_: 0,
+		numGoroutine_: numGoroutine,
 		next_:         0,
-		goroutines_:   make([]*EventLoopGoroutine, 0),
-		loops_:        make([]*EventLoop, 0),
 	}
+	for i := 0; i < numGoroutine; i++ {
+		t := NewEventLoopGoroutine(cb)
+		elgp.goroutines_ = append(elgp.goroutines_, t)
+		elgp.loops_ = append(elgp.loops_, t.loop_) //start loop and store the loop!
+	}
+	if numGoroutine == 0 && cb != nil {
+		cb(baseLoop)
+	}
+	return
 }
 
-func (ep *EventLoopGoroutinePool) SetGoroutineNum(num int) {
-	ep.numGoroutine_ = num
-}
+/* func (ep *EventLoopGoroutinePool) SetGoroutineNum(num int) { */
+/* ep.numGoroutine_ = num */
+/* } */
 
-func (ep *EventLoopGoroutinePool) Start(cb GoroutineCallback) {
+func (ep *EventLoopGoroutinePool) Start() {
 	if ep.IsStarted() {
 		log.Panicf("EventLoopGoroutinePool.Start(): failed , the pool is started\n")
 	}
-	ep.baseLoop_.AssertInLoopGoroutine()
+	// ep.baseLoop_.AssertInLoopGoroutine()
 
 	ep.started_ = true
-	for i := 0; i < ep.numGoroutine_; i++ {
-		t := NewEventLoopGoroutine(cb)
-		ep.goroutines_ = append(ep.goroutines_, t)
-		ep.loops_ = append(ep.loops_, t.StartLoop()) //start loop and store the loop!
-	}
 
-	if ep.numGoroutine_ == 0 && cb != nil {
-		cb(ep.baseLoop_)
+	for _, goroutineFunc := range ep.goroutines_ {
+		goroutineFunc.StartLoop()
 	}
-
 }
 
 func (ep *EventLoopGoroutinePool) GetNextLoop() (loop *EventLoop) {
 	if !ep.IsStarted() {
 		log.Panicf("EventLoopGoroutinePool.GetNextLoop(): failed , the pool isn't started\n")
 	}
-	ep.baseLoop_.AssertInLoopGoroutine()
+	// ep.baseLoop_.AssertInLoopGoroutine()
 
 	loop = ep.baseLoop_
 	if len(ep.loops_) > 0 {

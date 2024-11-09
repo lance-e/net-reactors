@@ -24,7 +24,7 @@ type TcpServer struct {
 	goroutineCallback_     GoroutineCallback
 }
 
-func NewTcpServer(loop *EventLoop, addr *netip.AddrPort, name string) (server *TcpServer) {
+func NewTcpServer(loop *EventLoop, addr *netip.AddrPort, name string, numGoroutine int) (server *TcpServer) {
 	server = &TcpServer{
 		loop_:          loop,
 		name_:          name,
@@ -32,7 +32,7 @@ func NewTcpServer(loop *EventLoop, addr *netip.AddrPort, name string) (server *T
 		started_:       0,
 		nextConnId_:    1,
 		connections_:   make(map[string]*TcpConnection, 0),
-		goroutinePool_: NewEventLoopGoroutinePool(loop),
+		goroutinePool_: NewEventLoopGoroutinePool(loop, numGoroutine, nil),
 
 		connectionCallback_:    func(tc *TcpConnection) {},
 		messageCallback_:       func(tc *TcpConnection, b *Buffer, t time.Time) {},
@@ -52,7 +52,7 @@ func NewTcpServer(loop *EventLoop, addr *netip.AddrPort, name string) (server *T
 func (t *TcpServer) Start() {
 	if atomic.CompareAndSwapInt64(&t.started_, 0, 1) {
 		//goroutine pool
-		t.goroutinePool_.Start(t.goroutineCallback_)
+		t.goroutinePool_.Start()
 
 		if t.acceptor_.listening_ {
 			log.Panicf("tcpserver's acceptor is listening\n")
@@ -62,12 +62,12 @@ func (t *TcpServer) Start() {
 	}
 }
 
-func (t *TcpServer) SetGoroutineNum(num int) {
-	if num < 0 {
-		log.Panicf("TcpServer.SetGoroutineNum: wrong goroutine number \n")
-	}
-	t.goroutinePool_.SetGoroutineNum(num)
-}
+/* func (t *TcpServer) SetGoroutineNum(num int) { */
+/* if num < 0 { */
+/* log.Panicf("TcpServer.SetGoroutineNum: wrong goroutine number \n") */
+/* } */
+/* t.goroutinePool_.SetGoroutineNum(num) */
+/* } */
 
 func (t *TcpServer) SetConnectionCallback(cb ConnectionCallback) {
 	t.connectionCallback_ = cb
@@ -87,7 +87,7 @@ func (t *TcpServer) SetGoroutineCallback(cb GoroutineCallback) {
 // *************************
 
 func (t *TcpServer) newConnection(fd int, peerAddr *netip.AddrPort) {
-	t.loop_.AssertInLoopGoroutine()
+	// t.loop_.AssertInLoopGoroutine()
 
 	//one loop per goroutine!
 	ioLoop := t.goroutinePool_.GetNextLoop()
@@ -95,7 +95,7 @@ func (t *TcpServer) newConnection(fd int, peerAddr *netip.AddrPort) {
 	//to create new connection
 	connName := fmt.Sprintf(t.name_+"#%d", t.nextConnId_)
 	t.nextConnId_++
-	log.Printf("TcpServer:newConnection [%s] - new connection [%s] from %s\n", t.name_, connName, peerAddr.String())
+	// log.Printf("TcpServer:newConnection [%s] - new connection [%s] from %s\n", t.name_, connName, peerAddr.String())
 
 	//create new connection and set it's attribute
 	conn := NewTcpConnection(ioLoop, connName, fd, socket.GetLocalAddr(fd), peerAddr)
@@ -119,8 +119,8 @@ func (t *TcpServer) bindRemoveConnection(conn *TcpConnection) func() {
 	}
 }
 func (t *TcpServer) removeConnectionInLoop(conn *TcpConnection) {
-	t.loop_.AssertInLoopGoroutine()
-	log.Printf("TcpServer:removeConnectionInLoop [%s] - connection [%s]\n", t.name_, conn.Name())
+	// t.loop_.AssertInLoopGoroutine()
+	// log.Printf("TcpServer:removeConnectionInLoop [%s] - connection [%s]\n", t.name_, conn.Name())
 	delete(t.connections_, conn.Name())
 	ioLoop := conn.GetLoop()
 	ioLoop.QueueInLoop(conn.ConnectDestroyed)

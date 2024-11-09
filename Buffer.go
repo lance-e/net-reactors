@@ -1,7 +1,6 @@
 package netreactors
 
 import (
-	"fmt"
 	"log"
 	"syscall"
 	"unsafe"
@@ -13,6 +12,8 @@ const (
 	PrependSize    = 8
 	BufferInitSize = 1024
 )
+
+var tempBuffer = make([]byte, 65536)
 
 //Buffer:
 /* +-------------------+------------------+------------------+ */
@@ -41,7 +42,6 @@ func NewBuffer() *Buffer {
 }
 
 func (b *Buffer) ReadFd(fd int, saveErrno *error) int {
-	tempBuffer := make([]byte, 65536)
 	vec := make([]unix.Iovec, 2)
 	writeable := b.WriteableBytes()
 	vec[0].Base = b.bytePointer(b.writerIndex_)
@@ -58,7 +58,7 @@ func (b *Buffer) ReadFd(fd int, saveErrno *error) int {
 	} else if n < uintptr(writeable) {
 		b.writerIndex_ += int(n)
 	} else {
-		fmt.Printf("Buffer.ReadFd:will use tempBuffer,and have use %d bytes\n", len(tempBuffer[:int(n)-writeable]))
+		// fmt.Printf("Buffer.ReadFd:will use tempBuffer,and have use %d bytes\n", len(tempBuffer[:int(n)-writeable]))
 		b.buffer_ = append(b.buffer_, tempBuffer[:int(n)-writeable]...)
 		b.writerIndex_ += int(n)
 	}

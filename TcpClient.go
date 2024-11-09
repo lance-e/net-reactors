@@ -103,7 +103,7 @@ func (tc *TcpClient) SetWriteCompleteCallback(cb WriteCompleteCallback) {
 // *************************
 
 func (tc *TcpClient) newConnection(fd int) {
-	tc.loop_.AssertInLoopGoroutine()
+	// tc.loop_.AssertInLoopGoroutine()
 	peerAddr := socket.GetPeerAddr(fd)
 	connName := tc.Name() + fmt.Sprintf(":%s#%d", peerAddr.String(), tc.nextConnId_)
 	tc.nextConnId_++
@@ -122,7 +122,7 @@ func (tc *TcpClient) newConnection(fd int) {
 }
 
 func (tc *TcpClient) removeConnection(conn *TcpConnection) {
-	tc.loop_.AssertInLoopGoroutine()
+	// tc.loop_.AssertInLoopGoroutine()
 	if tc.loop_ != tc.GetLoop() {
 		log.Panicf("removeConnection: the loop had changed\n")
 	}

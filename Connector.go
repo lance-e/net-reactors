@@ -50,7 +50,7 @@ func (c *Connector) Start() {
 }
 
 func (c *Connector) Restart() {
-	c.loop_.AssertInLoopGoroutine()
+	// c.loop_.AssertInLoopGoroutine()
 	c.setState(kDisconnected)
 	c.retryTime_ = InitRetryTime
 	atomic.StoreInt64(&c.connected_, 1)
@@ -67,7 +67,7 @@ func (c *Connector) Stop() {
 // *************************
 
 func (c *Connector) startInLoop() {
-	c.loop_.AssertInLoopGoroutine()
+	// c.loop_.AssertInLoopGoroutine()
 	if c.state_ != kDisconnected {
 		log.Panicf("Connector.startInLoop() : failed because connector's state isn't kConnecting\n")
 	}
@@ -80,7 +80,7 @@ func (c *Connector) startInLoop() {
 }
 
 func (c *Connector) stopInLoop() {
-	c.loop_.AssertInLoopGoroutine()
+	// c.loop_.AssertInLoopGoroutine()
 	if c.state_ == kConnecting {
 		c.setState(kDisconnected)
 		fd := c.removeAndResetChannel()

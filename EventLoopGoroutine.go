@@ -18,7 +18,7 @@ type EventLoopGoroutine struct {
 
 func NewEventLoopGoroutine(cb GoroutineCallback) (elg *EventLoopGoroutine) {
 	elg = &EventLoopGoroutine{
-		loop_:     nil,
+		loop_:     NewEventLoop(),
 		mutex_:    &sync.Mutex{},
 		exiting_:  false,
 		callback_: cb,
@@ -27,17 +27,20 @@ func NewEventLoopGoroutine(cb GoroutineCallback) (elg *EventLoopGoroutine) {
 	return
 }
 
-func (elg *EventLoopGoroutine) StartLoop() *EventLoop {
+func (elg *EventLoopGoroutine) StartLoop() {
 	//sub goroutine
-	go elg.goroutineFunc()
+	// go elg.goroutineFunc()
 
-	elg.mutex_.Lock()
-	for elg.loop_ == nil {
-		elg.cond_.Wait()
-	}
-	elg.mutex_.Unlock()
-
-	return elg.loop_
+	go func() {
+		elg.loop_.Loop()
+	}()
+	/*  elg.mutex_.Lock() */
+	/* for elg.loop_ == nil { */
+	/* elg.cond_.Wait() */
+	/* } */
+	/* elg.mutex_.Unlock() */
+	/*  */
+	// return elg.loop_
 }
 
 // *************************

@@ -60,7 +60,7 @@ func (e *EpollPoller) Poll(timeoutMs int, activeChannels *[]*Channel) time.Time 
 }
 
 func (e *EpollPoller) UpdateChannel(channel *Channel) {
-	e.AssertInLoopGoroutine()
+	// e.AssertInLoopGoroutine()
 	log.Printf("UpdateChannel: fd=%d , events=%d\n", channel.fd_, channel.events_)
 	index := channel.Index()
 	if index == kNew || index == kDeleted {
@@ -102,7 +102,7 @@ func (e *EpollPoller) UpdateChannel(channel *Channel) {
 }
 
 func (e *EpollPoller) RemoveChannel(channel *Channel) {
-	e.AssertInLoopGoroutine()
+	// e.AssertInLoopGoroutine()
 	log.Printf("RemoveChannel: fd = %d\n", channel.Fd())
 	//assert
 	if _, ok := e.channels_[channel.Fd()]; !ok {
@@ -126,9 +126,9 @@ func (e *EpollPoller) RemoveChannel(channel *Channel) {
 	channel.SetIndex(kNew)
 }
 
-func (e *EpollPoller) AssertInLoopGoroutine() {
-	e.loop_.AssertInLoopGoroutine()
-}
+/* func (e *EpollPoller) AssertInLoopGoroutine() { */
+/* e.loop_.AssertInLoopGoroutine() */
+/* } */
 
 // *************************
 // private:

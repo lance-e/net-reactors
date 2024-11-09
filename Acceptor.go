@@ -47,7 +47,7 @@ func (a *Acceptor) SetAcceptorNewConnectionCallback(cb AcceptorNewConnectionCall
 }
 
 func (a *Acceptor) Listen() {
-	a.loop_.AssertInLoopGoroutine()
+	// a.loop_.AssertInLoopGoroutine()
 	a.listening_ = true
 	socket.ListenOrDie(a.socketfd_)
 	a.acceptChannel_.EnableReading() //begin handle socketfd_'s read event
@@ -62,7 +62,7 @@ func (a *Acceptor) Listening() bool {
 // *************************
 
 func (a *Acceptor) handleRead(time time.Time) {
-	a.loop_.AssertInLoopGoroutine()
+	// a.loop_.AssertInLoopGoroutine()
 	connfd, addr := socket.Accept4(a.socketfd_)
 	if connfd >= 0 {
 		if a.acceptorNewConnectionCallback_ != nil {

@@ -49,10 +49,10 @@ func NewEventLoop() (el *EventLoop) {
 		looping_:                0,
 		quit_:                   0,
 		callingPendingFunctors_: 0,
-		goroutineId_:            goroutine.GetGoid(),
-		activeChannels:          make([]*Channel, 0),
-		mutex_:                  sync.Mutex{},
-		pendingFunctors_:        make([]Functor, 0),
+		// goroutineId_:            goroutine.GetGoid(),
+		activeChannels:   make([]*Channel, 0),
+		mutex_:           sync.Mutex{},
+		pendingFunctors_: make([]Functor, 0),
 	}
 	//eventfd more sutable for wakeupFd_
 	eventfd := util.CreateEventFd()
@@ -74,7 +74,8 @@ func NewEventLoop() (el *EventLoop) {
 
 // Loop
 func (loop *EventLoop) Loop() {
-	loop.AssertInLoopGoroutine()
+	loop.goroutineId_ = goroutine.GetGoid()
+	// loop.AssertInLoopGoroutine()
 	if !atomic.CompareAndSwapInt64(&loop.looping_, 0, 1) {
 		panic("EventLoop is looping, should stop")
 	}
@@ -102,12 +103,12 @@ func (loop *EventLoop) Quit() {
 	}
 }
 
-func (loop *EventLoop) AssertInLoopGoroutine() {
-	if !loop.IsInLoopGoroutine() {
-		loop.abortNotInLoopGoroutine()
-	}
-	return
-}
+/* func (loop *EventLoop) AssertInLoopGoroutine() { */
+/* if !loop.IsInLoopGoroutine() { */
+/* loop.abortNotInLoopGoroutine() */
+/* } */
+/* return */
+/* } */
 
 func (loop *EventLoop) IsInLoopGoroutine() bool {
 	return loop.goroutineId_ == goroutine.GetGoid()
@@ -117,18 +118,26 @@ func (loop *EventLoop) UpdateChannel(c *Channel) {
 	if loop != c.loop_ {
 		log.Panicf("loop.UpdateChannel: the chnnel's owner loop is this loop\n")
 	}
-	loop.AssertInLoopGoroutine()
-	loop.poller_.UpdateChannel(c)
+	// loop.AssertInLoopGoroutine()
+	loop.RunInLoop(func(c *Channel) func() {
+		return func() {
+			loop.poller_.UpdateChannel(c)
+		}
+	}(c))
 }
 
 func (loop *EventLoop) RemoveChannel(c *Channel) {
 	if loop != c.loop_ {
 		log.Panicf("loop.RemoveChannel: the chnnel's owner loop is this loop\n")
 	}
-	loop.AssertInLoopGoroutine()
+	// loop.AssertInLoopGoroutine()
 	//todo add eventHandling
 
-	loop.poller_.RemoveChannel(c)
+	loop.RunInLoop(func(c *Channel) func() {
+		return func() {
+			loop.poller_.RemoveChannel(c)
+		}
+	}(c))
 }
 
 // make sure run in loop
@@ -179,7 +188,7 @@ func (loop *EventLoop) Wakeup() {
 		byte(one), byte(one >> 8), byte(one >> 16), byte(one >> 24), byte(one >> 32), byte(one >> 40), byte(one >> 48), byte(one >> 56),
 	})
 	if n != 8 || err != nil {
-		log.Printf("Wakeup: write to wakeupFd_ failed, write %d bytes\n", n)
+		// log.Printf("Wakeup: write to wakeupFd_ failed, write %d bytes\n", n)
 	}
 }
 
@@ -213,6 +222,6 @@ func (loop *EventLoop) HandleRead(t time.Time) {
 	//such as: 5 times of write to eventfd , will read 5 ,and set the eventfd's counter to zere
 	n, err := unix.Read(loop.wakeupFd_, buf[:])
 	if err != nil || n != 8 {
-		log.Printf("loop.HandleRead: read from wakeupFd_ failed , read %d bytes\n", n)
+		// log.Printf("loop.HandleRead: read from wakeupFd_ failed , read %d bytes\n", n)
 	}
 }

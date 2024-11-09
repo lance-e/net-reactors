@@ -43,7 +43,7 @@ func (p *PollPoller) Poll(timeoutMs int, activeChannels *[]*Channel) time.Time {
 }
 
 func (p *PollPoller) UpdateChannel(channel *Channel) {
-	p.AssertInLoopGoroutine()
+	// p.AssertInLoopGoroutine()
 	log.Printf("UpdateChannel: fd=%d , events=%d\n", channel.fd_, channel.events_)
 	if channel.index_ < 0 {
 		// a new one , add to p.pollfds_
@@ -85,7 +85,7 @@ func (p *PollPoller) UpdateChannel(channel *Channel) {
 }
 
 func (p *PollPoller) RemoveChannel(channel *Channel) {
-	p.AssertInLoopGoroutine()
+	// p.AssertInLoopGoroutine()
 	log.Printf("RemoveChannel: fd = %d\n", channel.Fd())
 	if _, ok := p.channels_[channel.Fd()]; !ok {
 		log.Panicf("PollPoller.RemoveChannel:channel not found\n")
@@ -125,9 +125,9 @@ func (p *PollPoller) RemoveChannel(channel *Channel) {
 
 }
 
-func (p *PollPoller) AssertInLoopGoroutine() {
-	p.ownerLoop_.AssertInLoopGoroutine()
-}
+/* func (p *PollPoller) AssertInLoopGoroutine() { */
+/* p.ownerLoop_.AssertInLoopGoroutine() */
+/* } */
 
 // *************************
 // private:

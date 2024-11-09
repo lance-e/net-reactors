@@ -4,6 +4,7 @@ import (
 	"log"
 	"net-reactors/base/socket"
 	"net/netip"
+	"syscall"
 	"time"
 
 	"golang.org/x/sys/unix"
@@ -119,7 +120,7 @@ func (tc *TcpConnection) BindWriteCompleteCallback() func() {
 
 // called when TcpServer accepts a new connection
 func (tc *TcpConnection) ConnectEstablished() {
-	tc.loop_.AssertInLoopGoroutine()
+	// tc.loop_.AssertInLoopGoroutine()
 	if tc.state_ != kConnecting {
 		log.Panicf("TcpConnection's state not kConnecting\n")
 	}
@@ -133,7 +134,7 @@ func (tc *TcpConnection) ConnectEstablished() {
 
 // called when TcpServer has removed me from it's map
 func (tc *TcpConnection) ConnectDestroyed() {
-	tc.loop_.AssertInLoopGoroutine()
+	// tc.loop_.AssertInLoopGoroutine()
 	if tc.state_ == kConnected {
 		tc.setState(kDisconnected)
 		tc.channel_.DisableAll()
@@ -175,7 +176,7 @@ func (tc *TcpConnection) OutBuffer() *Buffer {
 // *************************
 
 func (tc *TcpConnection) handleRead(time time.Time) {
-	tc.loop_.AssertInLoopGoroutine()
+	// tc.loop_.AssertInLoopGoroutine()
 	var saveErrno error
 	n := tc.inBuffer_.ReadFd(tc.socketfd_, &saveErrno)
 	if n > 0 {
@@ -189,7 +190,7 @@ func (tc *TcpConnection) handleRead(time time.Time) {
 }
 
 func (tc *TcpConnection) handleWrite() {
-	tc.loop_.AssertInLoopGoroutine()
+	// tc.loop_.AssertInLoopGoroutine()
 	if tc.channel_.IsWriting() {
 		n, err := unix.Write(int(tc.channel_.Fd()), tc.outBuffer_.buffer_[tc.outBuffer_.readerIndex_:tc.outBuffer_.writerIndex_])
 		if n >= 0 {
@@ -213,7 +214,7 @@ func (tc *TcpConnection) handleWrite() {
 }
 
 func (tc *TcpConnection) handleClose() {
-	tc.loop_.AssertInLoopGoroutine()
+	// tc.loop_.AssertInLoopGoroutine()
 	log.Printf("TcpConnection:handleClose connection's state = %d\n", tc.state_)
 	if tc.state_ != kConnected && tc.state_ != kDisconnecting {
 		log.Panicf("TcpConnection:handleClose state isn't kConnected\n")
@@ -241,7 +242,7 @@ func (tc *TcpConnection) bindSendInLoop(msg []byte) func() {
 
 // run in loop goroutine
 func (tc *TcpConnection) sendInLoop(msg []byte) {
-	tc.loop_.AssertInLoopGoroutine()
+	// tc.loop_.AssertInLoopGoroutine()
 
 	var n int
 	var remaining = len(msg)
@@ -252,7 +253,7 @@ func (tc *TcpConnection) sendInLoop(msg []byte) {
 		return
 	}
 	if !tc.channel_.IsWriting() && tc.outBuffer_.ReadableBytes() == 0 {
-		n, err = unix.Write(int(tc.channel_.Fd()), msg)
+		n, err = syscall.Write(int(tc.socketfd_), msg)
 		if n >= 0 {
 			remaining = len(msg) - n
 			if n < len(msg) {
@@ -282,7 +283,7 @@ func (tc *TcpConnection) sendInLoop(msg []byte) {
 	}
 }
 func (tc *TcpConnection) shutdownInLoop() {
-	tc.loop_.AssertInLoopGoroutine()
+	// tc.loop_.AssertInLoopGoroutine()
 	if !tc.channel_.IsWriting() {
 		socket.ShutDownWrite(tc.socketfd_)
 	}

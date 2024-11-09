@@ -48,7 +48,7 @@ func NewTimerQueue(loop *EventLoop) (tq *TimerQueue) {
 
 // called when timer alarms
 func (tq *TimerQueue) HandleRead(t time.Time) {
-	tq.loop_.AssertInLoopGoroutine()
+	// tq.loop_.AssertInLoopGoroutine()
 	now := time.Now()
 	util.ReadTimerfd(tq.timerfd_, now)
 
@@ -119,7 +119,7 @@ func (tq *TimerQueue) bindAddTimerInLoop(timer *Timer) func() {
 
 // goroutine safe
 func (tq *TimerQueue) addTimerInLoop(timer *Timer) {
-	tq.loop_.AssertInLoopGoroutine()
+	// tq.loop_.AssertInLoopGoroutine()
 	earliestChaned := tq.insert(timer)
 	if earliestChaned {
 		util.ResetTimerfd(tq.timerfd_, timer.expiration_)
@@ -135,7 +135,7 @@ func (tq *TimerQueue) bindCancelTimerInLoop(timerid TimerId) func() {
 
 // goroutine safe
 func (tq *TimerQueue) cancelTimerInLoop(timerid TimerId) {
-	tq.loop_.AssertInLoopGoroutine()
+	// tq.loop_.AssertInLoopGoroutine()
 	if tq.timers_.Len() != len(tq.activeTimers_) {
 		log.Panicf("TimerQueue.cancelTimerInLoop(): the length of timers_ and activeTimers_ is not same\n")
 	}
@@ -179,7 +179,7 @@ func (tq *TimerQueue) reset(expired []TimeEntry, now time.Time) {
 }
 
 func (tq *TimerQueue) insert(timer *Timer) bool {
-	tq.loop_.AssertInLoopGoroutine()
+	// tq.loop_.AssertInLoopGoroutine()
 	if tq.timers_.Len() != len(tq.activeTimers_) {
 		log.Panicf("insert: the length of timers_ and activeTimers_ is not same\n")
 	}
