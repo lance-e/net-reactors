@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	netreactors "net-reactors"
 	"time"
 
+	netreactors "github.com/lance-e/net-reactors"
 	"golang.org/x/sys/unix"
 )
 

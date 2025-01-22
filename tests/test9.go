@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	netreactors "net-reactors"
 	"net/netip"
 	"os"
 	"time"
+
+	netreactors "github.com/lance-e/net-reactors"
 )
 
 func onConnection9(conn *netreactors.TcpConnection) {

@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	netreactors "net-reactors"
-	"net-reactors/base/goroutine"
 	"os"
 	"time"
+
+	netreactors "github.com/lance-e/net-reactors"
+	"github.com/lance-e/net-reactors/base/goroutine"
 )
 
 var gloop4 *netreactors.EventLoop

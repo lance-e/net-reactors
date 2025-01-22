@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	netreactors "net-reactors"
 	"net/netip"
 	"os"
 	"strconv"
 	"time"
+
+	netreactors "github.com/lance-e/net-reactors"
 )
 
 var (

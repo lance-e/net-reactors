@@ -3,10 +3,11 @@ package netreactors
 import (
 	"fmt"
 	"log"
-	"net-reactors/base/socket"
 	"net/netip"
 	"sync/atomic"
 	"time"
+
+	"github.com/lance-e/net-reactors/base/socket"
 )
 
 type TcpServer struct {

@@ -1,8 +1,9 @@
 package main
 
 import (
-	netreactors "net-reactors"
 	"sync"
+
+	netreactors "github.com/lance-e/net-reactors"
 )
 
 var globalLoop2 *netreactors.EventLoop

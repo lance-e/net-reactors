@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	netreactors "net-reactors"
 	"net/netip"
+
+	netreactors "github.com/lance-e/net-reactors"
 )
 
 var loop12 *netreactors.EventLoop

@@ -3,8 +3,6 @@ package netreactors
 import (
 	"fmt"
 	"log"
-	"net-reactors/base/goroutine"
-	"net-reactors/base/util"
 	"os/signal"
 	"sync"
 	"syscall"
@@ -12,6 +10,8 @@ import (
 
 	"sync/atomic"
 
+	"github.com/lance-e/net-reactors/base/goroutine"
+	"github.com/lance-e/net-reactors/base/util"
 	"golang.org/x/sys/unix"
 )
 

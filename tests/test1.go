@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
-	netreactors "net-reactors"
-	"net-reactors/base/goroutine"
 	"os"
+
+	"github.com/lance-e/net-reactors/base/goroutine"
+
+	netreactors "github.com/lance-e/net-reactors"
 )
 
 func goroutineFunc() {

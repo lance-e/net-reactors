@@ -3,10 +3,11 @@ package main
 import (
 	"fmt"
 	"log"
-	netreactors "net-reactors"
 	"net/netip"
 	"os"
 	"syscall"
+
+	netreactors "github.com/lance-e/net-reactors"
 )
 
 func newConnetion(fd int, addr *netip.AddrPort) {

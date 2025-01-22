@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	netreactors "net-reactors"
 	"net/netip"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	netreactors "github.com/lance-e/net-reactors"
 )
 
 var msg11 []byte

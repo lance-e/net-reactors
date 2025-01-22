@@ -2,11 +2,11 @@ package netreactors
 
 import (
 	"log"
-	"net-reactors/base/socket"
 	"net/netip"
 	"sync/atomic"
 	"time"
 
+	"github.com/lance-e/net-reactors/base/socket"
 	"golang.org/x/sys/unix"
 )
 

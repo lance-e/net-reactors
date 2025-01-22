@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	netreactors "net-reactors"
 	"net/netip"
 	"time"
+
+	netreactors "github.com/lance-e/net-reactors"
 )
 
 var hello = "hello!!!"

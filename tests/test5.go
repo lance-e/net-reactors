@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	netreactors "net-reactors"
 	"os"
 	"time"
+
+	netreactors "github.com/lance-e/net-reactors"
 )
 
 var globalLoop5 *netreactors.EventLoop

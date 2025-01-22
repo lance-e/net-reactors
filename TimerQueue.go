@@ -3,10 +3,11 @@ package netreactors
 import (
 	"container/heap"
 	"log"
-	"net-reactors/base/util"
 	"sort"
 	"sync/atomic"
 	"time"
+
+	"github.com/lance-e/net-reactors/base/util"
 )
 
 // fix: more high performance

@@ -1,4 +1,4 @@
-module net-reactors
+module github.com/lance-e/net-reactors
 
 go 1.23.2
 
