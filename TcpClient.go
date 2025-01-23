@@ -45,13 +45,13 @@ func NewTcpClient(loop *EventLoop, serverAddr *netip.AddrPort, name string) (cli
 		writeCompleteCallback_: nil,
 	}
 	client.connector_.SetConnectorNewConnectionCallback(client.newConnection)
-	log.Printf("NewTcpClient() trace: TcpClient [%s] - connector[%d]\n", client.Name(), &client.connector_)
+	Dlog.Printf("NewTcpClient() trace: TcpClient [%s] - connector[%d]\n", client.Name(), &client.connector_)
 
 	return
 }
 
 func (tc *TcpClient) Connect() {
-	log.Printf("TcpClient-[%s] connecting to [%s]\n", tc.Name(), tc.connector_.serverAddr_.String())
+	Dlog.Printf("TcpClient-[%s] connecting to [%s]\n", tc.Name(), tc.connector_.serverAddr_.String())
 	atomic.StoreInt64(&tc.connected_, 1)
 	tc.connector_.Start()
 }
@@ -137,7 +137,7 @@ func (tc *TcpClient) removeConnection(conn *TcpConnection) {
 
 	tc.loop_.QueueInLoop(tc.connection_.ConnectDestroyed)
 	if atomic.LoadInt64(&tc.retry_) == 1 && atomic.LoadInt64(&tc.connected_) == 1 {
-		log.Printf("TcpClient-[%s] reconnecting to [%s]\n", tc.Name(), tc.connector_.serverAddr_.String())
+		Dlog.Printf("TcpClient-[%s] reconnecting to [%s]\n", tc.Name(), tc.connector_.serverAddr_.String())
 		tc.connector_.Restart()
 	}
 

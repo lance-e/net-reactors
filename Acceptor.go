@@ -1,7 +1,6 @@
 package netreactors
 
 import (
-	"log"
 	"net/netip"
 	"time"
 
@@ -71,7 +70,7 @@ func (a *Acceptor) handleRead(time time.Time) {
 			unix.Close(connfd)
 		}
 	} else {
-		log.Printf("Acceptor:handleRead accept new connection happened error\n")
+		Dlog.Printf("Acceptor:handleRead accept new connection happened error\n")
 		//todo handle the special error
 		//if fd all use , here can do a special handle
 	}

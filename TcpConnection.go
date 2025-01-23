@@ -183,7 +183,7 @@ func (tc *TcpConnection) handleRead(time time.Time) {
 	} else if n == 0 {
 		tc.handleClose()
 	} else {
-		log.Printf("TcpConnection.handleRead: read failed,err:%s\n", saveErrno.Error())
+		Dlog.Printf("TcpConnection.handleRead: read failed,err:%s\n", saveErrno.Error())
 		tc.handleError()
 	}
 }
@@ -205,16 +205,16 @@ func (tc *TcpConnection) handleWrite() {
 				tc.shutdownInLoop()
 			}
 		} else {
-			log.Printf("TcpConnection.handleWrite: write from outBuffer_ failed, error is %s\n", err.Error())
+			Dlog.Printf("TcpConnection.handleWrite: write from outBuffer_ failed, error is %s\n", err.Error())
 		}
 	} else {
-		log.Printf("TcpConnection.handleWrite: connection is down ,no more writing\n")
+		Dlog.Printf("TcpConnection.handleWrite: connection is down ,no more writing\n")
 	}
 }
 
 func (tc *TcpConnection) handleClose() {
 	tc.loop_.AssertInLoopGoroutine()
-	log.Printf("TcpConnection:handleClose connection's state = %d\n", tc.state_)
+	Dlog.Printf("TcpConnection:handleClose connection's state = %d\n", tc.state_)
 	if tc.state_ != kConnected && tc.state_ != kDisconnecting {
 		log.Panicf("TcpConnection:handleClose state isn't kConnected\n")
 	}
@@ -227,9 +227,9 @@ func (tc *TcpConnection) handleClose() {
 func (tc *TcpConnection) handleError() {
 	errno, err := socket.GetSocketError(tc.socketfd_)
 	if err != nil {
-		log.Printf("TcpConnection.handleError: get socket errno failed\n")
+		Dlog.Printf("TcpConnection.handleError: get socket errno failed\n")
 	} else {
-		log.Printf("TcpConnection.handleError [%s] - SO_ERROR = %d\n", tc.name_, errno)
+		Dlog.Printf("TcpConnection.handleError [%s] - SO_ERROR = %d\n", tc.name_, errno)
 	}
 }
 
@@ -248,7 +248,7 @@ func (tc *TcpConnection) sendInLoop(msg []byte) {
 	faultError := false
 	var err error
 	if tc.state_ == kDisconnected {
-		log.Printf("disconnected , stop writing...\n")
+		Dlog.Printf("disconnected , stop writing...\n")
 		return
 	}
 	if !tc.channel_.IsWriting() && tc.outBuffer_.ReadableBytes() == 0 {
@@ -256,14 +256,14 @@ func (tc *TcpConnection) sendInLoop(msg []byte) {
 		if n >= 0 {
 			remaining = len(msg) - n
 			if n < len(msg) {
-				log.Printf("I am going to write more data\n")
+				Dlog.Printf("I am going to write more data\n")
 			} else if tc.writeCompleteCallback_ != nil {
 				tc.loop_.QueueInLoop(tc.BindWriteCompleteCallback())
 			}
 		} else {
 			n = 0
 			if err != unix.EWOULDBLOCK {
-				log.Printf("TcpConnection.sendInLoop error [%s]\n", err.Error())
+				Dlog.Printf("TcpConnection.sendInLoop error [%s]\n", err.Error())
 				if err == unix.EPIPE || err == unix.ECONNRESET {
 					faultError = true
 				}

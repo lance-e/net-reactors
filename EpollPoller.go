@@ -48,20 +48,20 @@ func (e *EpollPoller) Poll(timeoutMs int, activeChannels *[]*Channel) time.Time 
 	}
 	now := time.Now()
 	if n > 0 {
-		log.Printf("%d events happended\n", n)
+		Dlog.Printf("%d events happended\n", n)
 		e.fillActiveChannels(n, activeChannels)
 		if n == len(e.events_) {
 			e.events_ = make(eventList, len(e.events_), 2*cap(e.events_))
 		}
 	} else if n == 0 {
-		log.Printf("nothing happended\n")
+		Dlog.Printf("nothing happended\n")
 	}
 	return now
 }
 
 func (e *EpollPoller) UpdateChannel(channel *Channel) {
 	e.AssertInLoopGoroutine()
-	log.Printf("UpdateChannel: fd=%d , events=%d\n", channel.fd_, channel.events_)
+	Dlog.Printf("UpdateChannel: fd=%d , events=%d\n", channel.fd_, channel.events_)
 	index := channel.Index()
 	if index == kNew || index == kDeleted {
 		// a new one ,add with EPOLL_CTL_ADD
@@ -103,7 +103,7 @@ func (e *EpollPoller) UpdateChannel(channel *Channel) {
 
 func (e *EpollPoller) RemoveChannel(channel *Channel) {
 	e.AssertInLoopGoroutine()
-	log.Printf("RemoveChannel: fd = %d\n", channel.Fd())
+	Dlog.Printf("RemoveChannel: fd = %d\n", channel.Fd())
 	//assert
 	if _, ok := e.channels_[channel.Fd()]; !ok {
 		log.Panicf("EpollPoller.RemoveChannel:channel not found\n")
@@ -153,10 +153,10 @@ func (e *EpollPoller) update(op int, channel *Channel) {
 		Events: uint32(channel.events_),
 		Fd:     channel.Fd(),
 	}
-	log.Printf("EpollCtl: operation is [%s] , fd is [%d] \n", e.operationToString(op), channel.Fd())
+	Dlog.Printf("EpollCtl: operation is [%s] , fd is [%d] \n", e.operationToString(op), channel.Fd())
 	if err := unix.EpollCtl(e.epollfd, op, int(channel.Fd()), &event); err != nil {
 		if op == unix.EPOLL_CTL_DEL {
-			log.Printf("EpollPoller.update() error: operation is [%s] , fd is [%d]\n", e.operationToString(op), channel.Fd())
+			Dlog.Printf("EpollPoller.update() error: operation is [%s] , fd is [%d]\n", e.operationToString(op), channel.Fd())
 		} else {
 			log.Panicf("EpollPoller.update() panic: operation is [%s] , fd is [%d]\n", e.operationToString(op), channel.Fd())
 		}

@@ -28,7 +28,7 @@ type TimerQueue struct {
 func NewTimerQueue(loop *EventLoop) (tq *TimerQueue) {
 	tfd := util.CreateTimerFd()
 	if tfd < 0 {
-		log.Printf("NewTimerQueue: create timerfd failed, timerfd < 0 \n")
+		Dlog.Printf("NewTimerQueue: create timerfd failed, timerfd < 0 \n")
 	}
 
 	tq = &TimerQueue{

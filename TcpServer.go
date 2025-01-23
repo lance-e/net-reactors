@@ -96,7 +96,7 @@ func (t *TcpServer) newConnection(fd int, peerAddr *netip.AddrPort) {
 	//to create new connection
 	connName := fmt.Sprintf(t.name_+"#%d", t.nextConnId_)
 	t.nextConnId_++
-	log.Printf("TcpServer:newConnection [%s] - new connection [%s] from %s\n", t.name_, connName, peerAddr.String())
+	Dlog.Printf("TcpServer:newConnection [%s] - new connection [%s] from %s\n", t.name_, connName, peerAddr.String())
 
 	//create new connection and set it's attribute
 	conn := NewTcpConnection(ioLoop, connName, fd, socket.GetLocalAddr(fd), peerAddr)
@@ -121,7 +121,7 @@ func (t *TcpServer) bindRemoveConnection(conn *TcpConnection) func() {
 }
 func (t *TcpServer) removeConnectionInLoop(conn *TcpConnection) {
 	t.loop_.AssertInLoopGoroutine()
-	log.Printf("TcpServer:removeConnectionInLoop [%s] - connection [%s]\n", t.name_, conn.Name())
+	Dlog.Printf("TcpServer:removeConnectionInLoop [%s] - connection [%s]\n", t.name_, conn.Name())
 	delete(t.connections_, conn.Name())
 	ioLoop := conn.GetLoop()
 	ioLoop.QueueInLoop(conn.ConnectDestroyed)

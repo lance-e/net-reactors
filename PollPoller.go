@@ -34,17 +34,17 @@ func (p *PollPoller) Poll(timeoutMs int, activeChannels *[]*Channel) time.Time {
 	}
 	now := time.Now()
 	if n > 0 {
-		log.Printf("%d events happended\n", n)
+		Dlog.Printf("%d events happended\n", n)
 		p.fillActiveChannels(n, activeChannels)
 	} else if n == 0 {
-		log.Printf("nothing happended\n")
+		Dlog.Printf("nothing happended\n")
 	}
 	return now
 }
 
 func (p *PollPoller) UpdateChannel(channel *Channel) {
 	p.AssertInLoopGoroutine()
-	log.Printf("UpdateChannel: fd=%d , events=%d\n", channel.fd_, channel.events_)
+	Dlog.Printf("UpdateChannel: fd=%d , events=%d\n", channel.fd_, channel.events_)
 	if channel.index_ < 0 {
 		// a new one , add to p.pollfds_
 		if _, ok := p.channels_[channel.fd_]; ok {
@@ -86,7 +86,7 @@ func (p *PollPoller) UpdateChannel(channel *Channel) {
 
 func (p *PollPoller) RemoveChannel(channel *Channel) {
 	p.AssertInLoopGoroutine()
-	log.Printf("RemoveChannel: fd = %d\n", channel.Fd())
+	Dlog.Printf("RemoveChannel: fd = %d\n", channel.Fd())
 	if _, ok := p.channels_[channel.Fd()]; !ok {
 		log.Panicf("PollPoller.RemoveChannel:channel not found\n")
 	}

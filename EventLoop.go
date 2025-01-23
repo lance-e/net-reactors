@@ -57,7 +57,7 @@ func NewEventLoop() (el *EventLoop) {
 	//eventfd more sutable for wakeupFd_
 	eventfd := util.CreateEventFd()
 	if eventfd < 0 {
-		log.Printf("NewEventLoop: create eventfd failed , eventfd < 0 \n")
+		Dlog.Printf("NewEventLoop: create eventfd failed , eventfd < 0 \n")
 	}
 	el.wakeupFd_ = eventfd
 
@@ -179,7 +179,7 @@ func (loop *EventLoop) Wakeup() {
 		byte(one), byte(one >> 8), byte(one >> 16), byte(one >> 24), byte(one >> 32), byte(one >> 40), byte(one >> 48), byte(one >> 56),
 	})
 	if n != 8 || err != nil {
-		log.Printf("Wakeup: write to wakeupFd_ failed, write %d bytes\n", n)
+		Dlog.Printf("Wakeup: write to wakeupFd_ failed, write %d bytes\n", n)
 	}
 }
 
@@ -213,6 +213,6 @@ func (loop *EventLoop) HandleRead(t time.Time) {
 	//such as: 5 times of write to eventfd , will read 5 ,and set the eventfd's counter to zere
 	n, err := unix.Read(loop.wakeupFd_, buf[:])
 	if err != nil || n != 8 {
-		log.Printf("loop.HandleRead: read from wakeupFd_ failed , read %d bytes\n", n)
+		Dlog.Printf("loop.HandleRead: read from wakeupFd_ failed , read %d bytes\n", n)
 	}
 }
