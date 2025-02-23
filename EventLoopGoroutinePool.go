@@ -22,7 +22,7 @@ func NewEventLoopGoroutinePool(baseLoop *EventLoop) *EventLoopGoroutinePool {
 	return &EventLoopGoroutinePool{
 		baseLoop_:     baseLoop,
 		started_:      false,
-		numGoroutine_: 0,
+		numGoroutine_: 1,
 		next_:         0,
 		goroutines_:   make([]*EventLoopGoroutine, 0),
 		loops_:        make([]*EventLoop, 0),

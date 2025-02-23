@@ -1,14 +1,15 @@
 package netreactors
 
 import (
+	"syscall"
 	"time"
 
 	"golang.org/x/sys/unix"
 )
 
 type (
-	pollFdList []unix.PollFd     //for Poll
-	eventList  []unix.EpollEvent //for Epoll
+	pollFdList []unix.PollFd        //for Poll
+	eventList  []syscall.EpollEvent //for Epoll
 	channelMap map[int32]*Channel
 )
 

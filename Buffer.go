@@ -1,12 +1,9 @@
 package netreactors
 
 import (
-	"fmt"
 	"log"
 	"syscall"
 	"unsafe"
-
-	"golang.org/x/sys/unix"
 )
 
 const (
@@ -40,32 +37,34 @@ func NewBuffer() *Buffer {
 	}
 }
 
+var (
+	tempBuffer = make([]byte, 65536)
+)
+
 func (b *Buffer) ReadFd(fd int, saveErrno *error) int {
-	tempBuffer := make([]byte, 65536)
-	vec := make([]unix.Iovec, 2)
+	vec := make([]syscall.Iovec, 2)
 	writeable := b.WriteableBytes()
 	vec[0].Base = b.bytePointer(b.writerIndex_)
 	vec[0].Len = uint64(writeable)
 	vec[1].Base = &tempBuffer[0]
 	vec[1].Len = uint64(len(tempBuffer))
-	iovcnt := 2
-	if writeable > len(tempBuffer) {
-		iovcnt = 1
-	}
-	n, _, errno := syscall.Syscall(syscall.SYS_READV, uintptr(fd), uintptr(unsafe.Pointer(&vec[0])), uintptr(iovcnt))
-	if errno != 0 || n < 0 {
+
+	//readv
+	n, _, errno := syscall.Syscall(syscall.SYS_READV, uintptr(fd), uintptr(unsafe.Pointer(&vec[0])), 2)
+	size := int(int64(n))
+	if errno != 0 || size < 0 {
 		*saveErrno = errno
-	} else if n < uintptr(writeable) {
-		b.writerIndex_ += int(n)
+	} else if size <= writeable {
+		b.writerIndex_ += size
 	} else {
-		fmt.Printf("Buffer.ReadFd:will use tempBuffer,and have use %d bytes\n", len(tempBuffer[:int(n)-writeable]))
-		b.buffer_ = append(b.buffer_, tempBuffer[:int(n)-writeable]...)
-		b.writerIndex_ += int(n)
+		Dlog.Printf("Buffer.ReadFd:will use tempBuffer,and have use %d bytes\n", len(tempBuffer[:size-writeable]))
+		b.writerIndex_ = len(b.buffer_)
+		b.Append(tempBuffer[:size-writeable])
 	}
 	/* if int(n) == writeable+len(tempBuffer) { */
 	/* //read again */
 	/* } */
-	return int(n)
+	return size
 }
 
 func (b *Buffer) Peek() *byte {
@@ -108,6 +107,43 @@ func (b *Buffer) RetrieveAsString(size int) []byte {
 	ans := b.buffer_[b.readerIndex_ : b.readerIndex_+size]
 	b.Retrieve(size)
 	return ans
+}
+
+func (b *Buffer) Append(data []byte) {
+	// allacte more capacity
+	if b.WriteableBytes() < len(data) {
+		//(here is already include the use Prepend() or without read anything's case)
+		if b.WriteableBytes()+b.readerIndex_-PrependSize >= len(data) {
+			// move readable data into front ,don't need to allocate new capacity
+
+			readable := b.ReadableBytes()
+			copy(b.buffer_[PrependSize:], b.buffer_[b.readerIndex_:b.writerIndex_])
+			b.readerIndex_ = PrependSize
+			b.writerIndex_ = readable + PrependSize
+		} else {
+			// resize
+			//FIX: we can move readable data into front first if have free capacity in front
+			readable := b.ReadableBytes()
+			newbuffer := make([]byte, b.writerIndex_+len(data)+8192) //reserve 8192 byte
+			copy(newbuffer[PrependSize:], b.buffer_[b.readerIndex_:b.writerIndex_])
+			b.readerIndex_ = PrependSize
+			b.writerIndex_ = readable + PrependSize
+			b.buffer_ = newbuffer
+		}
+	}
+
+	//begin append data into buffer_
+	copy(b.buffer_[b.writerIndex_:], data)
+	b.writerIndex_ += len(data)
+
+}
+
+func (b *Buffer) Prepend(data []byte) {
+	if b.PrependBytes() < len(data) {
+		log.Panicf("Buffer.Prepend: size is more than the prependable bytes size\n")
+	}
+	b.readerIndex_ -= len(data)
+	copy(b.buffer_[b.readerIndex_:b.readerIndex_+len(data)], data[:])
 }
 
 // *************************

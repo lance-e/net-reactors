@@ -12,7 +12,6 @@ import (
 
 	"github.com/lance-e/net-reactors/base/goroutine"
 	"github.com/lance-e/net-reactors/base/util"
-	"golang.org/x/sys/unix"
 )
 
 // ignaore the SIGPIPE automatically ,you don't need care here
@@ -174,10 +173,11 @@ func (loop *EventLoop) Cancel(timerid TimerId) {
 }
 
 func (loop *EventLoop) Wakeup() {
-	var one uint64 = 1
-	n, err := unix.Write(loop.wakeupFd_, []byte{
-		byte(one), byte(one >> 8), byte(one >> 16), byte(one >> 24), byte(one >> 32), byte(one >> 40), byte(one >> 48), byte(one >> 56),
-	})
+	/* var one uint64 = 1 */
+	/* n, err := unix.Write(loop.wakeupFd_, []byte{ */
+	/* byte(one), byte(one >> 8), byte(one >> 16), byte(one >> 24), byte(one >> 32), byte(one >> 40), byte(one >> 48), byte(one >> 56), */
+	/* }) */
+	n, err := syscall.Write(loop.wakeupFd_, []byte{0, 0, 0, 0, 0, 0, 0, 1})
 	if n != 8 || err != nil {
 		Dlog.Printf("Wakeup: write to wakeupFd_ failed, write %d bytes\n", n)
 	}
@@ -211,7 +211,7 @@ func (loop *EventLoop) HandleRead(t time.Time) {
 	var buf [8]byte
 	//will read out the number of write event from eventfd's counter   into buf
 	//such as: 5 times of write to eventfd , will read 5 ,and set the eventfd's counter to zere
-	n, err := unix.Read(loop.wakeupFd_, buf[:])
+	n, err := syscall.Read(loop.wakeupFd_, buf[:])
 	if err != nil || n != 8 {
 		Dlog.Printf("loop.HandleRead: read from wakeupFd_ failed , read %d bytes\n", n)
 	}

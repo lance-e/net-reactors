@@ -5,13 +5,11 @@ import (
 	"log"
 	"net/netip"
 	"syscall"
-
-	"golang.org/x/sys/unix"
 )
 
 // create nonblock tcp socket fd
 func CreateNonBlockOrDie() int {
-	fd, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM|unix.SOCK_NONBLOCK|unix.SOCK_CLOEXEC, unix.IPPROTO_TCP)
+	fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM|syscall.SOCK_NONBLOCK|syscall.SOCK_CLOEXEC, syscall.IPPROTO_TCP)
 	if err != nil || fd < 0 {
 		log.Panicf("CreateNonBlockOrDie: create socketfd failed\n")
 
@@ -19,7 +17,7 @@ func CreateNonBlockOrDie() int {
 	return fd
 }
 func BindOrDie(fd int, addr *netip.AddrPort) {
-	if err := unix.Bind(fd, &unix.SockaddrInet4{
+	if err := syscall.Bind(fd, &syscall.SockaddrInet4{
 		Addr: addr.Addr().As4(),
 		Port: int(addr.Port()),
 	}); err != nil {
@@ -28,13 +26,13 @@ func BindOrDie(fd int, addr *netip.AddrPort) {
 }
 
 func ListenOrDie(fd int) {
-	if err := unix.Listen(fd, unix.SOMAXCONN); err != nil {
+	if err := syscall.Listen(fd, syscall.SOMAXCONN); err != nil {
 		log.Panicf("ListenOrDie: listen socketfd:%d failed\n", fd)
 	}
 }
 
 func Accept4(fd int) (int, *netip.AddrPort) {
-	nfd, sa, err := unix.Accept4(fd, unix.SOCK_NONBLOCK|unix.SOCK_CLOEXEC)
+	nfd, sa, err := syscall.Accept4(fd, syscall.SOCK_NONBLOCK|syscall.SOCK_CLOEXEC)
 	if nfd < 0 && err != nil {
 		switch err.(syscall.Errno) {
 		case syscall.EAGAIN:
@@ -67,17 +65,17 @@ func Accept4(fd int) (int, *netip.AddrPort) {
 	}
 	client := netip.AddrPort{}
 	switch addr := sa.(type) {
-	case *unix.SockaddrInet4:
+	case *syscall.SockaddrInet4:
 		ip, ok := netip.AddrFromSlice(addr.Addr[:])
 		if !ok {
 			log.Printf("Accept4: parse ip address failed\n")
 			break
 		}
 		client = netip.AddrPortFrom(ip, uint16(addr.Port))
-	case *unix.SockaddrInet6:
+	case *syscall.SockaddrInet6:
 		log.Printf("Accept4:don't handle ipv6\n")
 		break
-	case *unix.SockaddrUnix:
+	case *syscall.SockaddrUnix:
 		log.Printf("Accept4:don't handle unix family\n")
 		break
 	default:
@@ -88,7 +86,7 @@ func Accept4(fd int) (int, *netip.AddrPort) {
 }
 
 func Connect(fd int, addr *netip.AddrPort) error {
-	err := unix.Connect(fd, &unix.SockaddrInet4{
+	err := syscall.Connect(fd, &syscall.SockaddrInet4{
 		Addr: addr.Addr().As4(),
 		Port: int(addr.Port()),
 	})
@@ -100,7 +98,7 @@ func SetReuseAddr(fd int, isReuse bool) {
 	if isReuse {
 		opt = 1
 	}
-	if err := unix.SetsockoptInt(fd, unix.SOL_SOCKET, unix.SO_REUSEADDR, opt); err != nil {
+	if err := syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, opt); err != nil {
 		log.Printf("SetReuseAddr: set fd:%d reuse addr failed\n", fd)
 	}
 }
@@ -110,19 +108,19 @@ func SetReusePort(fd int, isReuse bool) {
 	if isReuse {
 		opt = 1
 	}
-	if err := unix.SetsockoptInt(fd, unix.SOL_SOCKET, unix.SO_REUSEPORT, opt); err != nil {
+	if err := syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, 15, opt); err != nil {
 		log.Printf("SetReusePort: set fd:%d reuse port failed\n", fd)
 	}
 }
 
 func GetLocalAddr(socketfd int) *netip.AddrPort {
-	sa, err := unix.Getsockname(socketfd)
+	sa, err := syscall.Getsockname(socketfd)
 	if err != nil {
 		log.Printf("GetLocalAddr: get socket name failed\n")
 	}
 	var addr netip.AddrPort
 	switch a := sa.(type) {
-	case *unix.SockaddrInet4:
+	case *syscall.SockaddrInet4:
 		ip, ok := netip.AddrFromSlice(a.Addr[:])
 		if !ok {
 			log.Printf("GetLocalAddr: parse ip address failed\n")
@@ -136,13 +134,13 @@ func GetLocalAddr(socketfd int) *netip.AddrPort {
 }
 
 func GetPeerAddr(socketfd int) *netip.AddrPort {
-	sa, err := unix.Getpeername(socketfd)
+	sa, err := syscall.Getpeername(socketfd)
 	if err != nil {
 		log.Printf("GetPeerAddr: get socket name failed\n")
 	}
 	var addr netip.AddrPort
 	switch a := sa.(type) {
-	case *unix.SockaddrInet4:
+	case *syscall.SockaddrInet4:
 		ip, ok := netip.AddrFromSlice(a.Addr[:])
 		if !ok {
 			log.Printf("GetPeerAddr: parse ip address failed\n")
@@ -162,7 +160,7 @@ func IsSelfConnect(fd int) bool {
 }
 
 func GetSocketError(fd int) (int, error) {
-	opt, err := unix.GetsockoptInt(fd, unix.SOL_SOCKET, unix.SO_ERROR)
+	opt, err := syscall.GetsockoptInt(fd, syscall.SOL_SOCKET, syscall.SO_ERROR)
 	if err != nil {
 		fmt.Printf("GetSocketError: get soket option filed , error is %s\n", err.Error())
 		return -1, err
@@ -171,7 +169,7 @@ func GetSocketError(fd int) (int, error) {
 }
 
 func ShutDownWrite(fd int) {
-	err := unix.Shutdown(fd, unix.SHUT_WR)
+	err := syscall.Shutdown(fd, syscall.SHUT_WR)
 	if err != nil {
 		fmt.Printf("Shutdown: shut down write failed , error is %s\n", err.Error())
 	}
@@ -182,7 +180,7 @@ func SetTcpNoDelay(fd int, on bool) {
 	if on {
 		opt = 1
 	}
-	err := unix.SetsockoptInt(fd, unix.IPPROTO_TCP, unix.TCP_NODELAY, opt)
+	err := syscall.SetsockoptInt(fd, syscall.IPPROTO_TCP, syscall.TCP_NODELAY, opt)
 	if err != nil {
 		fmt.Printf("Socket.SetTcpNoDelay: set failed , error is [%s]\n", err.Error())
 	}
@@ -193,7 +191,7 @@ func SetKeepAlive(fd int, on bool) {
 	if on {
 		opt = 1
 	}
-	err := unix.SetsockoptInt(fd, unix.SOL_SOCKET, unix.SO_KEEPALIVE, opt)
+	err := syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, syscall.SO_KEEPALIVE, opt)
 	if err != nil {
 		fmt.Printf("Socket.SetKeepAlive: set failed , error is [%s]\n", err.Error())
 	}

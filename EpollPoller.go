@@ -1,10 +1,10 @@
 package netreactors
 
 import (
+	"fmt"
 	"log"
+	"syscall"
 	"time"
-
-	"golang.org/x/sys/unix"
 )
 
 const (
@@ -32,7 +32,7 @@ func NewEpollPoller(loop *EventLoop) (ep *EpollPoller) {
 		channels_: make(channelMap),
 	}
 	var err error
-	if ep.epollfd, err = unix.EpollCreate1(unix.EPOLL_CLOEXEC); err != nil {
+	if ep.epollfd, err = syscall.EpollCreate1(syscall.EPOLL_CLOEXEC); err != nil {
 		log.Panicf("EpollPoller.NewEpollPoller(): create epollfd failed\n")
 	}
 
@@ -40,9 +40,9 @@ func NewEpollPoller(loop *EventLoop) (ep *EpollPoller) {
 }
 
 func (e *EpollPoller) Poll(timeoutMs int, activeChannels *[]*Channel) time.Time {
-	n, err := unix.EpollWait(e.epollfd, e.events_, timeoutMs)
+	n, err := syscall.EpollWait(e.epollfd, e.events_, -1)
 	if err != nil || n < 0 {
-		if err != unix.EINTR { //ignore EINTR
+		if err != syscall.EINTR { //ignore EINTR
 			log.Panicf("EpollPoller.Poll failed ,n:%d , err:%s \n", n, err.Error())
 		}
 	}
@@ -50,6 +50,7 @@ func (e *EpollPoller) Poll(timeoutMs int, activeChannels *[]*Channel) time.Time 
 	if n > 0 {
 		Dlog.Printf("%d events happended\n", n)
 		e.fillActiveChannels(n, activeChannels)
+
 		if n == len(e.events_) {
 			e.events_ = make(eventList, len(e.events_), 2*cap(e.events_))
 		}
@@ -80,7 +81,7 @@ func (e *EpollPoller) UpdateChannel(channel *Channel) {
 		}
 
 		channel.SetIndex(kAdded)
-		e.update(unix.EPOLL_CTL_ADD, channel)
+		e.update(syscall.EPOLL_CTL_ADD, channel)
 	} else {
 		// update existing one with EPOLL_CTL_MOD/DEL
 		if _, ok := e.channels_[channel.Fd()]; !ok {
@@ -94,9 +95,9 @@ func (e *EpollPoller) UpdateChannel(channel *Channel) {
 		}
 		if channel.IsNoneEvent() {
 			channel.SetIndex(kDeleted)
-			e.update(unix.EPOLL_CTL_DEL, channel)
+			e.update(syscall.EPOLL_CTL_DEL, channel)
 		} else {
-			e.update(unix.EPOLL_CTL_MOD, channel)
+			e.update(syscall.EPOLL_CTL_MOD, channel)
 		}
 	}
 }
@@ -106,22 +107,22 @@ func (e *EpollPoller) RemoveChannel(channel *Channel) {
 	Dlog.Printf("RemoveChannel: fd = %d\n", channel.Fd())
 	//assert
 	if _, ok := e.channels_[channel.Fd()]; !ok {
-		log.Panicf("EpollPoller.RemoveChannel:channel not found\n")
+		fmt.Printf("EpollPoller.RemoveChannel:channel not found\n")
 	}
 	if e.channels_[channel.Fd()] != channel {
-		log.Panicf("EpollPoller.RemoveChannel:channel isn't the target channel\n ")
+		fmt.Printf("EpollPoller.RemoveChannel:channel isn't the target channel\n ")
 	}
 	if !channel.IsNoneEvent() {
-		log.Panicf("EpollPoller.RemoveChannel:channel isn't none event\n")
+		fmt.Printf("EpollPoller.RemoveChannel:channel isn't none event\n")
 	}
 	idx := channel.Index()
 	if idx != kAdded && idx != kDeleted {
-		log.Panicln("EpollPoller.UpdateChannel: the index of channel is wrong")
+		fmt.Printf("EpollPoller.UpdateChannel: the index of channel is wrong")
 	}
 
 	delete(e.channels_, channel.Fd())
 	if idx == kAdded {
-		e.update(unix.EPOLL_CTL_DEL, channel)
+		e.update(syscall.EPOLL_CTL_DEL, channel)
 	}
 	channel.SetIndex(kNew)
 }
@@ -149,13 +150,13 @@ func (e *EpollPoller) fillActiveChannels(numEvents int, activeChannels *[]*Chann
 }
 
 func (e *EpollPoller) update(op int, channel *Channel) {
-	event := unix.EpollEvent{
+	event := syscall.EpollEvent{
 		Events: uint32(channel.events_),
 		Fd:     channel.Fd(),
 	}
 	Dlog.Printf("EpollCtl: operation is [%s] , fd is [%d] \n", e.operationToString(op), channel.Fd())
-	if err := unix.EpollCtl(e.epollfd, op, int(channel.Fd()), &event); err != nil {
-		if op == unix.EPOLL_CTL_DEL {
+	if err := syscall.EpollCtl(e.epollfd, op, int(channel.Fd()), &event); err != nil {
+		if op == syscall.EPOLL_CTL_DEL {
 			Dlog.Printf("EpollPoller.update() error: operation is [%s] , fd is [%d]\n", e.operationToString(op), channel.Fd())
 		} else {
 			log.Panicf("EpollPoller.update() panic: operation is [%s] , fd is [%d]\n", e.operationToString(op), channel.Fd())
@@ -165,11 +166,11 @@ func (e *EpollPoller) update(op int, channel *Channel) {
 
 func (e *EpollPoller) operationToString(operation int) string {
 	switch operation {
-	case unix.EPOLL_CTL_ADD:
+	case syscall.EPOLL_CTL_ADD:
 		return "ADD"
-	case unix.EPOLL_CTL_DEL:
+	case syscall.EPOLL_CTL_DEL:
 		return "DEL"
-	case unix.EPOLL_CTL_MOD:
+	case syscall.EPOLL_CTL_MOD:
 		return "MOD"
 	default:
 		return "UNKNOWN"

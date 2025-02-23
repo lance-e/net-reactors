@@ -3,10 +3,10 @@ package netreactors
 import (
 	"log"
 	"net/netip"
+	"syscall"
 	"time"
 
 	"github.com/lance-e/net-reactors/base/socket"
-	"golang.org/x/sys/unix"
 )
 
 const (
@@ -191,7 +191,7 @@ func (tc *TcpConnection) handleRead(time time.Time) {
 func (tc *TcpConnection) handleWrite() {
 	tc.loop_.AssertInLoopGoroutine()
 	if tc.channel_.IsWriting() {
-		n, err := unix.Write(int(tc.channel_.Fd()), tc.outBuffer_.buffer_[tc.outBuffer_.readerIndex_:tc.outBuffer_.writerIndex_])
+		n, err := syscall.Write(int(tc.channel_.Fd()), tc.outBuffer_.buffer_[tc.outBuffer_.readerIndex_:tc.outBuffer_.writerIndex_])
 		if n >= 0 {
 			tc.outBuffer_.Retrieve(n)
 			if tc.outBuffer_.ReadableBytes() == 0 {
@@ -243,43 +243,44 @@ func (tc *TcpConnection) bindSendInLoop(msg []byte) func() {
 func (tc *TcpConnection) sendInLoop(msg []byte) {
 	tc.loop_.AssertInLoopGoroutine()
 
-	var n int
-	var remaining = len(msg)
-	faultError := false
-	var err error
+	/* var n int */
+	/* var remaining = len(msg) */
+	/* faultError := false */
+	/* var err error */
 	if tc.state_ == kDisconnected {
 		Dlog.Printf("disconnected , stop writing...\n")
 		return
 	}
-	if !tc.channel_.IsWriting() && tc.outBuffer_.ReadableBytes() == 0 {
-		n, err = unix.Write(int(tc.channel_.Fd()), msg)
-		if n >= 0 {
-			remaining = len(msg) - n
-			if n < len(msg) {
-				Dlog.Printf("I am going to write more data\n")
-			} else if tc.writeCompleteCallback_ != nil {
-				tc.loop_.QueueInLoop(tc.BindWriteCompleteCallback())
-			}
-		} else {
-			n = 0
-			if err != unix.EWOULDBLOCK {
-				Dlog.Printf("TcpConnection.sendInLoop error [%s]\n", err.Error())
-				if err == unix.EPIPE || err == unix.ECONNRESET {
-					faultError = true
-				}
-			}
-		}
-	}
 
-	if !faultError && remaining > 0 {
-		//todo:
-		//run highWaterMarkCallback_
+	/* if !tc.channel_.IsWriting() && tc.outBuffer_.ReadableBytes() == 0 { */
+	/* n, err = syscall.Write(int(tc.channel_.Fd()), msg) */
+	/* if n >= 0 { */
+	/* remaining = len(msg) - n */
+	/* if n < len(msg) { */
+	/* Dlog.Printf("I am going to write more data\n") */
+	/* } else if tc.writeCompleteCallback_ != nil { */
+	/* tc.loop_.QueueInLoop(tc.BindWriteCompleteCallback()) */
+	/* } */
+	/* } else { */
+	/* n = 0 */
+	/* if err != syscall.EWOULDBLOCK { */
+	/* Dlog.Printf("TcpConnection.sendInLoop error [%s]\n", err.Error()) */
+	/* if err == syscall.EPIPE || err == syscall.ECONNRESET { */
+	/* faultError = true */
+	/* } */
+	/* } */
+	/* } */
+	/* } */
+	/*  */
+	/* if !faultError && remaining > 0 { */
+	//todo:
+	//run highWaterMarkCallback_
 
-		tc.outBuffer_.buffer_ = append(tc.outBuffer_.buffer_, msg[n:]...)
-		if !tc.channel_.IsWriting() {
-			tc.channel_.EnableWriting()
-		}
+	tc.outBuffer_.Append(msg)
+	if !tc.channel_.IsWriting() {
+		tc.channel_.EnableWriting()
 	}
+	// }
 }
 func (tc *TcpConnection) shutdownInLoop() {
 	tc.loop_.AssertInLoopGoroutine()
