@@ -83,7 +83,15 @@ func (tc *TcpConnection) SendFromBuffer(buf *Buffer) {
 	}
 }
 
-// ShutDown
+// ForceClose: force close connetion
+func (tc *TcpConnection) ForceClose() {
+	if tc.state_ == kConnected || tc.state_ == kDisconnecting {
+		tc.setState(kDisconnecting)
+		tc.loop_.RunInLoop(tc.forceCloseInLoop)
+	}
+}
+
+// Shutdown: shutDown write side
 func (tc *TcpConnection) Shutdown() {
 	if tc.state_ == kConnected {
 		tc.setState(kDisconnecting)
@@ -282,6 +290,15 @@ func (tc *TcpConnection) sendInLoop(msg []byte) {
 	}
 	// }
 }
+
+func (tc *TcpConnection) forceCloseInLoop() {
+	tc.loop_.AssertInLoopGoroutine()
+	if tc.state_ == kConnected || tc.state_ == kDisconnecting {
+		//as if read 0 byte in handleRead
+		tc.handleClose()
+	}
+}
+
 func (tc *TcpConnection) shutdownInLoop() {
 	tc.loop_.AssertInLoopGoroutine()
 	if !tc.channel_.IsWriting() {
